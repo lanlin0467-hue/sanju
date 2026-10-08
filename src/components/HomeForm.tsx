@@ -25,6 +25,7 @@ export function HomeForm() {
   const [loading, setLoading] = useState(false);
   const [failMessage, setFailMessage] = useState("");
   const [result, setResult] = useState<Styles | null>(null);
+  const [copiedStyle, setCopiedStyle] = useState<keyof Styles | "">("");
 
   function openFilePicker() {
     fileInputRef.current?.click();
@@ -63,6 +64,26 @@ export function HomeForm() {
     setImageDataUrl(compressed.dataUrl);
     setPreviewUrl(compressed.previewUrl);
     setCompressedLabel(`压缩后 ${formatKb(compressed.bytes)}`);
+  }
+
+  async function onCopy(style: keyof Styles, line: string) {
+    try {
+      await navigator.clipboard.writeText(line);
+    } catch {
+      const area = document.createElement("textarea");
+      area.value = line;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.left = "-9999px";
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand("copy");
+      document.body.removeChild(area);
+    }
+    setCopiedStyle(style);
+    window.setTimeout(() => {
+      setCopiedStyle((current) => (current === style ? "" : current));
+    }, 1500);
   }
 
   async function onGenerate() {
@@ -215,7 +236,16 @@ export function HomeForm() {
               key={name}
               className="rounded-md border border-neutral-200 p-4"
             >
-              <h2 className="text-sm font-medium text-neutral-500">{name}</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-medium text-neutral-500">{name}</h2>
+                <button
+                  type="button"
+                  onClick={() => void onCopy(name, line)}
+                  className="text-sm text-neutral-800 underline-offset-2 hover:underline"
+                >
+                  {copiedStyle === name ? "已复制" : "复制"}
+                </button>
+              </div>
               <p className="mt-2 text-base leading-7">{line}</p>
             </article>
           ))}
