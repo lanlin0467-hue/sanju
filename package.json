@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "try": "node scripts/try-image.mjs"
   },
   "dependencies": {
     "next": "16.4.0",

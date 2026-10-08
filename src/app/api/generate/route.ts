@@ -1,5 +1,6 @@
+import { validateImageDataUrl } from "@/lib/image";
 import { allStylesLengthOk, isCopyLengthOk } from "@/lib/length";
-import { callModel } from "@/lib/modelClient";
+import { callModel, type ModelContent } from "@/lib/modelClient";
 import {
   buildPrompt,
   buildReplacePrompt,
@@ -12,6 +13,7 @@ import {
 type GenerateBody = {
   mood?: unknown;
   scene?: unknown;
+  image?: unknown;
   replaceStyle?: unknown;
   previous?: unknown;
 };
@@ -32,11 +34,26 @@ export async function POST(request: Request) {
   }
 
   const mood = body.mood.trim();
-  const scene =
-    typeof body.scene === "string" && body.scene.trim() !== ""
-      ? body.scene.trim()
-      : "（未提供画面描述）";
+  const sceneText =
+    typeof body.scene === "string" ? body.scene.trim() : "";
 
+  let image: string | undefined;
+  if (typeof body.image === "string" && body.image.trim() !== "") {
+    const checked = validateImageDataUrl(body.image);
+    if (!checked.ok) {
+      return Response.json({ error: checked.message }, { status: 400 });
+    }
+    image = checked.value;
+  }
+
+  if (!sceneText && !image) {
+    return Response.json(
+      { error: "请提供画面(图片或描述)" },
+      { status: 400 },
+    );
+  }
+
+  const scene = sceneText || "（见上传图片）";
   const replaceStyle =
     typeof body.replaceStyle === "string" ? body.replaceStyle.trim() : "";
 
@@ -55,16 +72,17 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
+      // 换句只发文字,不带图片。
       const line = await replaceWithLengthRetry({
         mood,
-        scene,
+        scene: sceneText || "（画面理解以文字为准）",
         style: replaceStyle,
         previous,
       });
       return Response.json({ [replaceStyle]: line });
     }
 
-    const result = await generateWithLengthRetry({ mood, scene });
+    const result = await generateWithLengthRetry({ mood, scene, image });
     return Response.json(result);
   } catch (error) {
     const message =
@@ -86,11 +104,21 @@ function normalizePrevious(value: unknown): string[] {
   return [];
 }
 
+function toContent(prompt: string, image?: string): ModelContent {
+  if (!image) return prompt;
+  return [
+    { type: "text", text: prompt },
+    { type: "image_url", image_url: { url: image } },
+  ];
+}
+
 async function generateWithLengthRetry(input: {
   mood: string;
   scene: string;
+  image?: string;
 }): Promise<ThreeStyles> {
-  const firstRaw = await callModel(buildPrompt(input));
+  const prompt = buildPrompt({ mood: input.mood, scene: input.scene });
+  const firstRaw = await callModel(toContent(prompt, input.image));
   const first = parseThreeStyles(firstRaw);
   if (allStylesLengthOk(first)) {
     return first;
@@ -98,9 +126,12 @@ async function generateWithLengthRetry(input: {
 
   console.info("字数不合格,已重写 1 次");
   const secondRaw = await callModel(
-    `${buildPrompt(input)}
+    toContent(
+      `${prompt}
 
 上一稿字数不合要求(每句须约 16–25 字,标点不计)。请重写三句,仍然只输出同样字段的 JSON。`,
+      input.image,
+    ),
   );
   return parseThreeStyles(secondRaw);
 }
