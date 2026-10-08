@@ -35,7 +35,7 @@ export function HomeForm() {
   const [result, setResult] = useState<Styles | null>(null);
   const [history, setHistory] = useState<History>(EMPTY_HISTORY);
   const [copiedStyle, setCopiedStyle] = useState<StyleName | "">("");
-  const [swapsLeft, setSwapsLeft] = useState(limits.swaps);
+  const [swapsLeft, setSwapsLeft] = useState<number>(limits.swaps);
 
   function openFilePicker() {
     fileInputRef.current?.click();
