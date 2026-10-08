@@ -1,4 +1,5 @@
 import { callModel } from "@/lib/modelClient";
+import { buildPrompt, parseThreeStyles } from "@/lib/prompt";
 
 type GenerateBody = {
   mood?: unknown;
@@ -24,11 +25,10 @@ export async function POST(request: Request) {
       ? body.scene.trim()
       : "（未提供画面描述）";
 
-  const prompt = `画面：${scene}\n心情：${mood}\n请用一句话简短回应。`;
-
   try {
-    const reply = await callModel(prompt);
-    return Response.json({ reply });
+    const raw = await callModel(buildPrompt({ mood, scene }));
+    const result = parseThreeStyles(raw);
+    return Response.json(result);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "生成失败,请稍后再试";
