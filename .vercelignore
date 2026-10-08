@@ -1,8 +1,8 @@
 .next
 node_modules
 .git
-.env*
-*.md
-scripts
+.env.local
+.env*.local
 docs
+scripts
 AGENTS.md

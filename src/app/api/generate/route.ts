@@ -12,6 +12,9 @@ import {
 } from "@/lib/prompt";
 import { consumeModelBudget } from "@/lib/rateLimit";
 
+/** OpenRouter 偶发 30s+;Vercel 默认过短会断成「没连上后厨」。 */
+export const maxDuration = 60;
+
 type GenerateBody = {
   mood?: unknown;
   scene?: unknown;

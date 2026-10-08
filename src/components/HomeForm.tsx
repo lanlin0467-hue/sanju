@@ -119,7 +119,14 @@ export function HomeForm() {
           ...(imageDataUrl ? { image: imageDataUrl } : {}),
         }),
       });
-      const data = (await response.json()) as Styles & { error?: string };
+      const raw = await response.text();
+      let data: Styles & { error?: string };
+      try {
+        data = JSON.parse(raw) as Styles & { error?: string };
+      } catch {
+        setFailMessage("后厨超时或返回异常,请稍后再试");
+        return;
+      }
       if (!response.ok || data.error) {
         setFailMessage(data.error || "生成失败,请稍后再试");
         return;
@@ -164,9 +171,14 @@ export function HomeForm() {
           previous,
         }),
       });
-      const data = (await response.json()) as Partial<Styles> & {
-        error?: string;
-      };
+      const raw = await response.text();
+      let data: Partial<Styles> & { error?: string };
+      try {
+        data = JSON.parse(raw) as Partial<Styles> & { error?: string };
+      } catch {
+        setFailMessage("后厨超时或返回异常,请稍后再试");
+        return;
+      }
       if (!response.ok || data.error || !data[style]) {
         setFailMessage(data.error || "换句失败,请稍后再试");
         return;
