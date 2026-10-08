@@ -20,6 +20,27 @@ export class ModelCallError extends Error {
 }
 
 export async function callModel(userContent: ModelContent): Promise<string> {
+  if (process.env.FAKE_MODEL === "1") {
+    const text =
+      typeof userContent === "string"
+        ? userContent
+        : userContent.find((part) => part.type === "text")?.text ?? "";
+    if (text.includes("只重写一种文风") || text.includes("只要写「")) {
+      const style =
+        (["鲁迅", "莎士比亚", "江南"] as const).find((name) =>
+          text.includes(`只要写「${name}」`),
+        ) ?? "鲁迅";
+      return JSON.stringify({
+        [style]: `${style}换句占位写满十六个汉字以上啊`,
+      });
+    }
+    return JSON.stringify({
+      鲁迅: "鲁迅占位句子写满十六个汉字以上啊啊",
+      莎士比亚: "莎士比亚占位句子写满十六个汉字以上",
+      江南: "江南占位句子写满十六个汉字以上啊啊啊",
+    });
+  }
+
   const apiKey = process.env.MODEL_API_KEY?.trim();
   if (!apiKey) {
     throw new ModelCallError("生成失败,请稍后再试");
@@ -54,7 +75,6 @@ export async function callModel(userContent: ModelContent): Promise<string> {
   }
 
   if (!response.ok) {
-    // 不把服务商原文或密钥细节回给前端。
     throw new ModelCallError("生成失败,请稍后再试");
   }
 
