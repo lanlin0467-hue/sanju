@@ -10,6 +10,9 @@ export function validateImageDataUrl(image: string): {
   message: string;
 } {
   const value = image.trim();
+  if (value.startsWith("data:application/pdf") || value.includes("application/pdf")) {
+    return { ok: false, message: "图片格式不对,请上传 JPG、PNG 或 WEBP" };
+  }
   if (!ALLOWED.test(value)) {
     return { ok: false, message: "图片格式不对,请上传 JPG、PNG 或 WEBP" };
   }

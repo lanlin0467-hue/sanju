@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   }
 
   if (typeof body.mood !== "string" || body.mood.trim() === "") {
-    return Response.json({ error: "请提供心情 mood" }, { status: 400 });
+    return Response.json({ error: "请提供心情" }, { status: 400 });
   }
 
   const mood = body.mood.trim();
@@ -87,7 +87,9 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "生成失败,请稍后再试";
-    return Response.json({ error: message }, { status: 500 });
+    // 解析失败等业务错误可以原样提示;模型调用错误已在 modelClient 里收成固定话术。
+    const status = message.startsWith("生成失败") ? 502 : 500;
+    return Response.json({ error: message }, { status });
   }
 }
 

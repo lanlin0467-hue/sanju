@@ -12,37 +12,55 @@ export type ModelContent =
       | { type: "image_url"; image_url: { url: string } }
     >;
 
+export class ModelCallError extends Error {
+  constructor(message = "生成失败,请稍后再试") {
+    super(message);
+    this.name = "ModelCallError";
+  }
+}
+
 export async function callModel(userContent: ModelContent): Promise<string> {
   const apiKey = process.env.MODEL_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("缺少 MODEL_API_KEY,请在 .env.local 里配置");
+    throw new ModelCallError("生成失败,请稍后再试");
   }
 
-  const response = await fetch(OPENROUTER_CHAT_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL_ID,
-      messages: [{ role: "user", content: userContent }],
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(OPENROUTER_CHAT_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL_ID,
+        messages: [{ role: "user", content: userContent }],
+      }),
+    });
+  } catch {
+    throw new ModelCallError("生成失败,请稍后再试");
+  }
 
-  const payload = (await response.json()) as {
+  let payload: {
     choices?: Array<{ message?: { content?: string } }>;
     error?: { message?: string };
-  };
+  } = {};
+
+  try {
+    payload = (await response.json()) as typeof payload;
+  } catch {
+    throw new ModelCallError("生成失败,请稍后再试");
+  }
 
   if (!response.ok) {
-    const detail = payload.error?.message ?? `HTTP ${response.status}`;
-    throw new Error(`模型调用失败: ${detail}`);
+    // 不把服务商原文或密钥细节回给前端。
+    throw new ModelCallError("生成失败,请稍后再试");
   }
 
   const content = payload.choices?.[0]?.message?.content?.trim();
   if (!content) {
-    throw new Error("模型没有返回文字");
+    throw new ModelCallError("生成失败,请稍后再试");
   }
 
   return content;
