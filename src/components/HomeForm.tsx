@@ -194,7 +194,7 @@ export function HomeForm() {
   ).filter((item): item is [StyleName, string] => Boolean(item[1]));
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-md px-4 py-8 pb-28">
+    <main className="mx-auto min-h-dvh w-full max-w-md px-4 py-8 pb-28 pt-[max(2rem,env(safe-area-inset-top))]">
       <h1 className="text-3xl font-semibold tracking-tight">三句</h1>
       <p className="mt-2 text-sm leading-6 text-neutral-600">
         把画面和心情写成三种味道，挑一句就用。
@@ -313,7 +313,7 @@ export function HomeForm() {
                     <button
                       type="button"
                       onClick={() => void onCopy(name, line)}
-                      className="min-h-10 px-1 text-sm text-neutral-800 underline-offset-2 hover:underline"
+                      className="min-h-11 px-1 text-sm text-neutral-800 underline-offset-2 hover:underline"
                     >
                       {copiedStyle === name ? "已复制" : "复制"}
                     </button>
@@ -321,7 +321,7 @@ export function HomeForm() {
                       type="button"
                       disabled={replaceDisabled}
                       onClick={() => void onReplace(name)}
-                      className="min-h-10 px-1 text-sm text-neutral-800 underline-offset-2 hover:underline disabled:text-neutral-400 disabled:no-underline"
+                      className="min-h-11 px-1 text-sm text-neutral-800 underline-offset-2 hover:underline disabled:text-neutral-400 disabled:no-underline"
                     >
                       {busy ? "正在写…" : "换这句"}
                     </button>
