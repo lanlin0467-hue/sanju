@@ -4,4 +4,10 @@ body {
   margin: 0;
   background: #ffffff;
   color: #171717;
+  font-family:
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Noto Sans SC",
+    "Microsoft YaHei",
+    sans-serif;
 }
