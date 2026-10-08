@@ -2,13 +2,20 @@
 
 import { useRef, useState } from "react";
 import { compressImage, formatKb } from "@/lib/compressImage";
+import { limits } from "@/lib/config";
 
 const PRIVACY_TEXT = "上传图片请注意隐私与备份，本站不留存您的图片";
 
-type Styles = {
-  鲁迅: string;
-  莎士比亚: string;
-  江南: string;
+type StyleName = "鲁迅" | "莎士比亚" | "江南";
+
+type Styles = Record<StyleName, string>;
+
+type History = Record<StyleName, string[]>;
+
+const EMPTY_HISTORY: History = {
+  鲁迅: [],
+  莎士比亚: [],
+  江南: [],
 };
 
 export function HomeForm() {
@@ -23,9 +30,12 @@ export function HomeForm() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [replacingStyle, setReplacingStyle] = useState<StyleName | "">("");
   const [failMessage, setFailMessage] = useState("");
   const [result, setResult] = useState<Styles | null>(null);
-  const [copiedStyle, setCopiedStyle] = useState<keyof Styles | "">("");
+  const [history, setHistory] = useState<History>(EMPTY_HISTORY);
+  const [copiedStyle, setCopiedStyle] = useState<StyleName | "">("");
+  const [swapsLeft, setSwapsLeft] = useState(limits.swaps);
 
   function openFilePicker() {
     fileInputRef.current?.click();
@@ -66,7 +76,7 @@ export function HomeForm() {
     setCompressedLabel(`压缩后 ${formatKb(compressed.bytes)}`);
   }
 
-  async function onCopy(style: keyof Styles, line: string) {
+  async function onCopy(style: StyleName, line: string) {
     try {
       await navigator.clipboard.writeText(line);
     } catch {
@@ -98,6 +108,7 @@ export function HomeForm() {
 
     setLoading(true);
     setResult(null);
+    setHistory(EMPTY_HISTORY);
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -117,11 +128,18 @@ export function HomeForm() {
         setFailMessage("生成失败,请稍后再试");
         return;
       }
-      setResult({
+      const nextResult = {
         鲁迅: data.鲁迅,
         莎士比亚: data.莎士比亚,
         江南: data.江南,
+      };
+      setResult(nextResult);
+      setHistory({
+        鲁迅: [nextResult.鲁迅],
+        莎士比亚: [nextResult.莎士比亚],
+        江南: [nextResult.江南],
       });
+      setSwapsLeft(limits.swaps);
     } catch {
       setFailMessage("没连上后厨,请稍后再试");
     } finally {
@@ -129,8 +147,54 @@ export function HomeForm() {
     }
   }
 
+  async function onReplace(style: StyleName) {
+    if (!result || replacingStyle || swapsLeft <= 0) return;
+
+    setFailMessage("");
+    setReplacingStyle(style);
+    const previous = history[style];
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mood: mood.trim(),
+          scene: scene.trim() || "（见上传图片）",
+          replaceStyle: style,
+          previous,
+        }),
+      });
+      const data = (await response.json()) as Partial<Styles> & {
+        error?: string;
+      };
+      if (!response.ok || data.error || !data[style]) {
+        setFailMessage(data.error || "换句失败,请稍后再试");
+        return;
+      }
+      const line = data[style] as string;
+      setResult({ ...result, [style]: line });
+      setHistory({
+        ...history,
+        [style]: [...previous, line],
+      });
+      setSwapsLeft((n) => Math.max(0, n - 1));
+    } catch {
+      setFailMessage("没连上后厨,请稍后再试");
+    } finally {
+      setReplacingStyle("");
+    }
+  }
+
+  const styles = (
+    [
+      ["鲁迅", result?.鲁迅],
+      ["莎士比亚", result?.莎士比亚],
+      ["江南", result?.江南],
+    ] as const
+  ).filter((item): item is [StyleName, string] => Boolean(item[1]));
+
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-md px-4 py-8">
+    <main className="mx-auto min-h-dvh w-full max-w-md px-4 py-8 pb-28">
       <h1 className="text-3xl font-semibold tracking-tight">三句</h1>
       <p className="mt-2 text-sm leading-6 text-neutral-600">
         把画面和心情写成三种味道，挑一句就用。
@@ -156,7 +220,7 @@ export function HomeForm() {
           <button
             type="button"
             onClick={onChooseImageClick}
-            className="w-full rounded-md border border-neutral-300 px-4 py-3 text-left text-base"
+            className="min-h-12 w-full rounded-md border border-neutral-300 px-4 py-3 text-left text-base"
           >
             选择图片
           </button>
@@ -183,7 +247,7 @@ export function HomeForm() {
             onChange={(event) => setScene(event.target.value)}
             rows={3}
             placeholder="也可以只写文字，比如：黄昏的海边"
-            className="w-full resize-none rounded-md border border-neutral-300 px-3 py-2 text-base outline-none focus:border-neutral-800"
+            className="w-full resize-none rounded-md border border-neutral-300 px-3 py-3 text-base outline-none focus:border-neutral-800"
           />
         </label>
 
@@ -194,7 +258,7 @@ export function HomeForm() {
             value={mood}
             onChange={(event) => setMood(event.target.value)}
             placeholder="比如：怅然、开心、有点孤单"
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-base outline-none focus:border-neutral-800"
+            className="min-h-12 w-full rounded-md border border-neutral-300 px-3 py-3 text-base outline-none focus:border-neutral-800"
           />
         </label>
 
@@ -212,8 +276,8 @@ export function HomeForm() {
 
         <button
           type="submit"
-          disabled={loading}
-          className="w-full rounded-md bg-neutral-900 px-4 py-3 text-base font-medium text-white disabled:opacity-60"
+          disabled={loading || Boolean(replacingStyle)}
+          className="min-h-12 w-full rounded-md bg-neutral-900 px-4 py-3 text-base font-medium text-white disabled:opacity-60"
         >
           {loading ? "正在写…" : "生成"}
         </button>
@@ -225,30 +289,50 @@ export function HomeForm() {
 
       {result ? (
         <section className="mt-8 space-y-4">
-          {(
-            [
-              ["鲁迅", result.鲁迅],
-              ["莎士比亚", result.莎士比亚],
-              ["江南", result.江南],
-            ] as const
-          ).map(([name, line]) => (
-            <article
-              key={name}
-              className="rounded-md border border-neutral-200 p-4"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-medium text-neutral-500">{name}</h2>
-                <button
-                  type="button"
-                  onClick={() => void onCopy(name, line)}
-                  className="text-sm text-neutral-800 underline-offset-2 hover:underline"
-                >
-                  {copiedStyle === name ? "已复制" : "复制"}
-                </button>
-              </div>
-              <p className="mt-2 text-base leading-7">{line}</p>
-            </article>
-          ))}
+          <p className="text-sm text-neutral-600">还能换 {swapsLeft} 次</p>
+          {swapsLeft === 0 ? (
+            <p className="text-sm text-neutral-500">
+              这三次已经换完。改画面或心情后重新点「生成」，次数才会恢复。
+            </p>
+          ) : null}
+
+          {styles.map(([name, line]) => {
+            const busy = replacingStyle === name;
+            const replaceDisabled =
+              swapsLeft <= 0 || Boolean(replacingStyle) || loading;
+            return (
+              <article
+                key={name}
+                className="rounded-md border border-neutral-200 p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-medium text-neutral-500">
+                    {name}
+                  </h2>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => void onCopy(name, line)}
+                      className="min-h-10 px-1 text-sm text-neutral-800 underline-offset-2 hover:underline"
+                    >
+                      {copiedStyle === name ? "已复制" : "复制"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={replaceDisabled}
+                      onClick={() => void onReplace(name)}
+                      className="min-h-10 px-1 text-sm text-neutral-800 underline-offset-2 hover:underline disabled:text-neutral-400 disabled:no-underline"
+                    >
+                      {busy ? "正在写…" : "换这句"}
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-2 text-base leading-7">
+                  {busy ? "正在重写这一句…" : line}
+                </p>
+              </article>
+            );
+          })}
         </section>
       ) : null}
 
@@ -259,7 +343,7 @@ export function HomeForm() {
             <button
               type="button"
               onClick={onPrivacyAccept}
-              className="mt-5 w-full rounded-md bg-neutral-900 px-4 py-3 text-base font-medium text-white"
+              className="mt-5 min-h-12 w-full rounded-md bg-neutral-900 px-4 py-3 text-base font-medium text-white"
             >
               知道了
             </button>
