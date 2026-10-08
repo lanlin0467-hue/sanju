@@ -5,17 +5,26 @@ import { compressImage, formatKb } from "@/lib/compressImage";
 
 const PRIVACY_TEXT = "上传图片请注意隐私与备份，本站不留存您的图片";
 
+type Styles = {
+  鲁迅: string;
+  莎士比亚: string;
+  江南: string;
+};
+
 export function HomeForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [scene, setScene] = useState("");
   const [mood, setMood] = useState("");
-  const [hasImage, setHasImage] = useState(false);
+  const [imageDataUrl, setImageDataUrl] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   const [compressedLabel, setCompressedLabel] = useState("");
   const [imageError, setImageError] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [failMessage, setFailMessage] = useState("");
+  const [result, setResult] = useState<Styles | null>(null);
 
   function openFilePicker() {
     fileInputRef.current?.click();
@@ -32,7 +41,6 @@ export function HomeForm() {
   function onPrivacyAccept() {
     setShowPrivacy(false);
     setPrivacyAccepted(true);
-    // 等弹层关掉后再打开系统选图,避免被拦截。
     window.setTimeout(() => openFilePicker(), 0);
   }
 
@@ -43,29 +51,61 @@ export function HomeForm() {
     setImageError("");
     setCompressedLabel("");
     setPreviewUrl("");
-    setHasImage(false);
+    setImageDataUrl("");
 
-    const result = await compressImage(file);
-    if (!result.ok) {
-      setImageError(result.message);
+    const compressed = await compressImage(file);
+    if (!compressed.ok) {
+      setImageError(compressed.message);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    setHasImage(true);
-    setPreviewUrl(result.previewUrl);
-    setCompressedLabel(`压缩后 ${formatKb(result.bytes)}`);
+    setImageDataUrl(compressed.dataUrl);
+    setPreviewUrl(compressed.previewUrl);
+    setCompressedLabel(`压缩后 ${formatKb(compressed.bytes)}`);
   }
 
-  function onGenerate() {
+  async function onGenerate() {
     const next: string[] = [];
     if (!mood.trim()) next.push("请填写心情");
-    if (!scene.trim() && !hasImage) {
+    if (!scene.trim() && !imageDataUrl) {
       next.push("请提供画面：上传图片或填写描述");
     }
     setErrors(next);
+    setFailMessage("");
     if (next.length > 0) return;
-    // 任务 12:仍不连后厨。
+
+    setLoading(true);
+    setResult(null);
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mood: mood.trim(),
+          ...(scene.trim() ? { scene: scene.trim() } : {}),
+          ...(imageDataUrl ? { image: imageDataUrl } : {}),
+        }),
+      });
+      const data = (await response.json()) as Styles & { error?: string };
+      if (!response.ok || data.error) {
+        setFailMessage(data.error || "生成失败,请稍后再试");
+        return;
+      }
+      if (!data.鲁迅 || !data.莎士比亚 || !data.江南) {
+        setFailMessage("生成失败,请稍后再试");
+        return;
+      }
+      setResult({
+        鲁迅: data.鲁迅,
+        莎士比亚: data.莎士比亚,
+        江南: data.江南,
+      });
+    } catch {
+      setFailMessage("没连上后厨,请稍后再试");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -79,7 +119,7 @@ export function HomeForm() {
         className="mt-8 space-y-5"
         onSubmit={(event) => {
           event.preventDefault();
-          onGenerate();
+          void onGenerate();
         }}
       >
         <div className="space-y-2">
@@ -90,7 +130,7 @@ export function HomeForm() {
             accept="image/*"
             capture="environment"
             className="hidden"
-            onChange={(event) => onPickImage(event.target.files)}
+            onChange={(event) => void onPickImage(event.target.files)}
           />
           <button
             type="button"
@@ -145,13 +185,42 @@ export function HomeForm() {
           </ul>
         ) : null}
 
+        {failMessage ? (
+          <p className="text-sm text-red-600">{failMessage}</p>
+        ) : null}
+
         <button
           type="submit"
-          className="w-full rounded-md bg-neutral-900 px-4 py-3 text-base font-medium text-white"
+          disabled={loading}
+          className="w-full rounded-md bg-neutral-900 px-4 py-3 text-base font-medium text-white disabled:opacity-60"
         >
-          生成
+          {loading ? "正在写…" : "生成"}
         </button>
       </form>
+
+      {loading ? (
+        <p className="mt-6 text-sm text-neutral-600">正在写三种味道，稍等片刻。</p>
+      ) : null}
+
+      {result ? (
+        <section className="mt-8 space-y-4">
+          {(
+            [
+              ["鲁迅", result.鲁迅],
+              ["莎士比亚", result.莎士比亚],
+              ["江南", result.江南],
+            ] as const
+          ).map(([name, line]) => (
+            <article
+              key={name}
+              className="rounded-md border border-neutral-200 p-4"
+            >
+              <h2 className="text-sm font-medium text-neutral-500">{name}</h2>
+              <p className="mt-2 text-base leading-7">{line}</p>
+            </article>
+          ))}
+        </section>
+      ) : null}
 
       {showPrivacy ? (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-4 sm:items-center sm:justify-center">
