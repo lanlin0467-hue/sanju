@@ -1,25 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { compressImage, formatKb } from "@/lib/compressImage";
+
+const PRIVACY_TEXT = "上传图片请注意隐私与备份，本站不留存您的图片";
 
 export function HomeForm() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [scene, setScene] = useState("");
   const [mood, setMood] = useState("");
-  const [imageName, setImageName] = useState("");
+  const [hasImage, setHasImage] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [compressedLabel, setCompressedLabel] = useState("");
+  const [imageError, setImageError] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
-  function onPickImage(fileList: FileList | null) {
+  function openFilePicker() {
+    fileInputRef.current?.click();
+  }
+
+  function onChooseImageClick() {
+    if (!privacyAccepted) {
+      setShowPrivacy(true);
+      return;
+    }
+    openFilePicker();
+  }
+
+  function onPrivacyAccept() {
+    setShowPrivacy(false);
+    setPrivacyAccepted(true);
+    // 等弹层关掉后再打开系统选图,避免被拦截。
+    window.setTimeout(() => openFilePicker(), 0);
+  }
+
+  async function onPickImage(fileList: FileList | null) {
     const file = fileList?.[0];
-    setImageName(file ? file.name : "");
+    if (!file) return;
+
+    setImageError("");
+    setCompressedLabel("");
+    setPreviewUrl("");
+    setHasImage(false);
+
+    const result = await compressImage(file);
+    if (!result.ok) {
+      setImageError(result.message);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setHasImage(true);
+    setPreviewUrl(result.previewUrl);
+    setCompressedLabel(`压缩后 ${formatKb(result.bytes)}`);
   }
 
   function onGenerate() {
     const next: string[] = [];
     if (!mood.trim()) next.push("请填写心情");
-    if (!scene.trim() && !imageName) next.push("请提供画面：上传图片或填写描述");
+    if (!scene.trim() && !hasImage) {
+      next.push("请提供画面：上传图片或填写描述");
+    }
     setErrors(next);
     if (next.length > 0) return;
-    // 任务 11:暂不连后厨。
+    // 任务 12:仍不连后厨。
   }
 
   return (
@@ -36,19 +82,38 @@ export function HomeForm() {
           onGenerate();
         }}
       >
-        <label className="block space-y-2">
+        <div className="space-y-2">
           <span className="text-sm font-medium">选择图片</span>
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             capture="environment"
-            className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-neutral-900 file:px-3 file:py-2 file:text-sm file:text-white"
+            className="hidden"
             onChange={(event) => onPickImage(event.target.files)}
           />
-          {imageName ? (
-            <span className="block text-xs text-neutral-500">已选：{imageName}</span>
+          <button
+            type="button"
+            onClick={onChooseImageClick}
+            className="w-full rounded-md border border-neutral-300 px-4 py-3 text-left text-base"
+          >
+            选择图片
+          </button>
+          {compressedLabel ? (
+            <p className="text-xs text-neutral-500">{compressedLabel}</p>
           ) : null}
-        </label>
+          {previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={previewUrl}
+              alt="压缩后的预览"
+              className="mt-2 max-h-56 w-full rounded-md object-cover"
+            />
+          ) : null}
+          {imageError ? (
+            <p className="text-sm text-red-600">{imageError}</p>
+          ) : null}
+        </div>
 
         <label className="block space-y-2">
           <span className="text-sm font-medium">画面描述</span>
@@ -87,6 +152,21 @@ export function HomeForm() {
           生成
         </button>
       </form>
+
+      {showPrivacy ? (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-4 sm:items-center sm:justify-center">
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-lg">
+            <p className="text-base leading-7 text-neutral-900">{PRIVACY_TEXT}</p>
+            <button
+              type="button"
+              onClick={onPrivacyAccept}
+              className="mt-5 w-full rounded-md bg-neutral-900 px-4 py-3 text-base font-medium text-white"
+            >
+              知道了
+            </button>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
