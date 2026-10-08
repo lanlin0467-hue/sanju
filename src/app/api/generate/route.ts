@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { validateImageDataUrl } from "@/lib/image";
 import { allStylesLengthOk, isCopyLengthOk } from "@/lib/length";
 import { callModel, type ModelContent } from "@/lib/modelClient";
@@ -9,6 +10,7 @@ import {
   parseThreeStyles,
   type StyleName,
 } from "@/lib/prompt";
+import { consumeModelBudget } from "@/lib/rateLimit";
 
 type GenerateBody = {
   mood?: unknown;
@@ -20,17 +22,19 @@ type GenerateBody = {
 
 type ThreeStyles = Record<StyleName, string>;
 
+const VISITOR_COOKIE = "sanju_vid";
+
 export async function POST(request: Request) {
   let body: GenerateBody;
 
   try {
     body = (await request.json()) as GenerateBody;
   } catch {
-    return Response.json({ error: "请求体不是合法的 JSON" }, { status: 400 });
+    return NextResponse.json({ error: "请求体不是合法的 JSON" }, { status: 400 });
   }
 
   if (typeof body.mood !== "string" || body.mood.trim() === "") {
-    return Response.json({ error: "请提供心情" }, { status: 400 });
+    return NextResponse.json({ error: "请提供心情" }, { status: 400 });
   }
 
   const mood = body.mood.trim();
@@ -41,13 +45,18 @@ export async function POST(request: Request) {
   if (typeof body.image === "string" && body.image.trim() !== "") {
     const checked = validateImageDataUrl(body.image);
     if (!checked.ok) {
-      return Response.json({ error: checked.message }, { status: 400 });
+      return NextResponse.json({ error: checked.message }, { status: 400 });
     }
     image = checked.value;
+    const approxKb = Math.max(
+      1,
+      Math.round(((image.split(",")[1]?.length ?? 0) * 3) / 4 / 1024),
+    );
+    console.info(`收到图片 ${approxKb} KB`);
   }
 
   if (!sceneText && !image) {
-    return Response.json(
+    return NextResponse.json(
       { error: "请提供画面(图片或描述)" },
       { status: 400 },
     );
@@ -56,41 +65,74 @@ export async function POST(request: Request) {
   const scene = sceneText || "（见上传图片）";
   const replaceStyle =
     typeof body.replaceStyle === "string" ? body.replaceStyle.trim() : "";
+  let previous: string[] = [];
+
+  if (replaceStyle) {
+    if (!isStyleName(replaceStyle)) {
+      return NextResponse.json(
+        { error: "只能换鲁迅、莎士比亚、江南其中一种" },
+        { status: 400 },
+      );
+    }
+    previous = normalizePrevious(body.previous);
+    if (previous.length === 0) {
+      return NextResponse.json(
+        { error: "换句时要带上之前出现过的句子" },
+        { status: 400 },
+      );
+    }
+  }
+
+  const visitorId = readVisitorId(request) ?? crypto.randomUUID();
+  const budget = consumeModelBudget(visitorId);
+  if (!budget.ok) {
+    return withVisitorCookie(
+      NextResponse.json({ error: budget.message }, { status: budget.status }),
+      visitorId,
+    );
+  }
 
   try {
-    if (replaceStyle) {
-      if (!isStyleName(replaceStyle)) {
-        return Response.json(
-          { error: "只能换鲁迅、莎士比亚、江南其中一种" },
-          { status: 400 },
-        );
-      }
-      const previous = normalizePrevious(body.previous);
-      if (previous.length === 0) {
-        return Response.json(
-          { error: "换句时要带上之前出现过的句子" },
-          { status: 400 },
-        );
-      }
-      // 换句只发文字,不带图片。
+    if (replaceStyle && isStyleName(replaceStyle)) {
       const line = await replaceWithLengthRetry({
         mood,
         scene: sceneText || "（画面理解以文字为准）",
         style: replaceStyle,
         previous,
       });
-      return Response.json({ [replaceStyle]: line });
+      return withVisitorCookie(
+        NextResponse.json({ [replaceStyle]: line }),
+        visitorId,
+      );
     }
 
     const result = await generateWithLengthRetry({ mood, scene, image });
-    return Response.json(result);
+    return withVisitorCookie(NextResponse.json(result), visitorId);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "生成失败,请稍后再试";
-    // 解析失败等业务错误可以原样提示;模型调用错误已在 modelClient 里收成固定话术。
     const status = message.startsWith("生成失败") ? 502 : 500;
-    return Response.json({ error: message }, { status });
+    return withVisitorCookie(
+      NextResponse.json({ error: message }, { status }),
+      visitorId,
+    );
   }
+}
+
+function readVisitorId(request: Request): string | undefined {
+  const raw = request.headers.get("cookie") ?? "";
+  const match = raw.match(new RegExp(`(?:^|;\\s*)${VISITOR_COOKIE}=([^;]+)`));
+  return match?.[1] ? decodeURIComponent(match[1]) : undefined;
+}
+
+function withVisitorCookie(response: NextResponse, visitorId: string) {
+  response.cookies.set(VISITOR_COOKIE, visitorId, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  return response;
 }
 
 function normalizePrevious(value: unknown): string[] {
