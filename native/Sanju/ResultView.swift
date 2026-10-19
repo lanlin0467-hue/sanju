@@ -6,244 +6,247 @@ struct ResultView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let creationID: UUID
     var editInput: () -> Void
-    @State private var historyStyle: WritingStyle?
+    var showLibrary: (() -> Void)? = nil
+    @State private var showingHistory = false
     @State private var copied: UUID?
     @State private var showingFeedback = false
     @State private var showingAccess = false
     private var record: Creation? { store.record(creationID) }
     private var pending: PendingGeneration? { store.pending?.creationId == creationID ? store.pending : nil }
+    private var failed: PendingGeneration? { store.failedOperation?.creationId == creationID ? store.failedOperation : nil }
+    private var oldCount: Int { guard let record else { return 0 }; return max(0, record.versions.count - WritingStyle.allCases.count) }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                introduction
+            VStack(alignment: .leading, spacing: 24) {
                 if let record {
-                    context(record.input)
-                    savedStatus(record)
-                    ForEach(WritingStyle.allCases) { style in
-                        if let line = record.current(style) { sentenceCard(record, line: line) }
-                    }
-                    if let pending, !store.isBusy { recovery(pending) }
-                    footer(record)
-                } else if let pending {
-                    context(pending.input)
-                    Label(store.isBusy ? "正在把这一刻，慢慢写成三句…" : "这次结果还需要确认", systemImage: "sparkles")
-                        .font(.subheadline).foregroundStyle(CreationPalette.pearl)
-                    ForEach(WritingStyle.allCases) { style in
-                        PoetrySurface(color: PoetryTheme.paper(style)) {
-                            VStack(alignment: .leading, spacing: 18) {
-                                PoetryStyleLabel(style: style)
-                                RoundedRectangle(cornerRadius: 5).fill(CreationPalette.ink.opacity(0.08)).frame(height: 18)
-                                RoundedRectangle(cornerRadius: 5).fill(CreationPalette.ink.opacity(0.08)).frame(maxWidth: 180).frame(height: 18)
-                            }.padding(.vertical, 6)
+                    ContextSummary(input: record.input, date: record.createdAt)
+                    VStack(spacing: 12) {
+                        SectionHeading(title: "三种文风", detail: record.expiresAt > Date() ? "可换 \(record.swapsRemaining) 次 · 24 小时内有效" : "换句已过期")
+                        ForEach(Array(WritingStyle.allCases.enumerated()), id: \.element) { index, style in
+                            if let line = record.current(style) {
+                                SentenceResultCard(record: record, line: line, pending: pending, failed: failed?.style == style, copied: copied == line.id) { copy(line) }
+                                    .modifier(SentenceArrival(delay: Double(index) * 0.08))
+                            }
                         }
                     }
-                    if store.isBusy {
-                        ProgressView().tint(CreationPalette.pearl).frame(maxWidth: .infinity)
-                        Text("可以先去句库，回来后继续查看。").font(.caption).foregroundStyle(CreationPalette.pearl)
-                    } else { recovery(pending) }
+                    if !store.isSaved(creationID) {
+                        Label("尚未保存，可以先复制。请腾出设备空间，再找回并保存结果。", systemImage: "exclamationmark.triangle")
+                            .font(.footnote).foregroundStyle(SanjuTheme.secondaryText)
+                    } else {
+                        Label(record.isDemo ? "示例内容 · 已存入句库" : "已存入句库", systemImage: "checkmark.circle")
+                            .font(.footnote).foregroundStyle(SanjuTheme.secondaryText)
+                    }
+                    if let pending, !store.isBusy { recovery(pending) }
+                    Button("用这个画面再写", systemImage: "square.and.pencil", action: editInput).frame(maxWidth: .infinity, minHeight: 44)
+                    Text("再次生成会使用一次新的创作额度。").font(.caption).foregroundStyle(SanjuTheme.secondaryText).frame(maxWidth: .infinity)
+                } else if let pending {
+                    ContextSummary(input: pending.input, date: pending.startedAt)
+                    if store.isBusy { generating } else { recovery(pending) }
                 } else {
-                    PoetrySurface {
-                        ContentUnavailableView("这次还没写好", systemImage: "cloud", description: Text("原来的输入已保留，返回创作页后可以重试。"))
-                            .foregroundStyle(CreationPalette.ink)
+                    if let failed { ContextSummary(input: failed.input, date: failed.startedAt) }
+                    Surface {
+                        VStack(spacing: 12) {
+                            ContentUnavailableView("这次没有写好", systemImage: "cloud", description: Text(store.failureDescription ?? "原来的照片、画面和心情都还在，可以返回后重试。"))
+                            if let failed, store.draft != failed.input {
+                                Text("你在等待时更新的草稿已保留，可以返回后继续创作。")
+                                    .font(.footnote).foregroundStyle(SanjuTheme.secondaryText)
+                            } else {
+                                PrimaryButton(title: "重试") { Task { _ = await store.startCreation() } }
+                            }
+                            Button("返回修改", action: editInput).frame(minHeight: 44)
+                            Text("未成功的创作不消耗创作次数，素材已保留。").font(.footnote).foregroundStyle(SanjuTheme.secondaryText)
+                        }
                     }
                 }
-            }.padding(.horizontal, 22).padding(.top, 16).padding(.bottom, 28)
+            }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 24)
         }
-        .background { CreationOceanBackground() }
-        .navigationTitle("本次三句").navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(CreationPalette.ocean, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar).toolbarColorScheme(.dark, for: .navigationBar)
-        .tint(CreationPalette.coral)
+        .background(SanjuTheme.background)
+        .navigationTitle("三句").navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if record != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingHistory = true } label: {
+                        HStack(spacing: 4) { Image(systemName: "clock.arrow.circlepath"); if oldCount > 0 { Text("\(oldCount)").font(.caption.weight(.semibold)) } }.frame(minWidth: 44, minHeight: 44)
+                    }.accessibilityLabel("旧句（\(oldCount) 条）").accessibilityIdentifier("sentenceHistory")
+                }
+                if !store.isDemo {
+                    ToolbarItem(placement: .secondaryAction) { Button("反馈这份创作") { showingFeedback = true } }
+                }
+            }
+        }
         .sheet(isPresented: $showingAccess) { BetaAccessView() }
         .sheet(isPresented: $showingFeedback) { FeedbackView(creationID: creationID) }
-        .sheet(item: $historyStyle) { style in SentenceHistoryView(creationID: creationID, style: style) }
+        .sheet(isPresented: $showingHistory) { SentenceHistoryView(creationID: creationID) }
         .sensoryFeedback(.success, trigger: copied)
         .task(id: copied) {
-            guard copied != nil else { return }
-            try? await Task.sleep(for: .seconds(2))
+            guard copied != nil else { return }; try? await Task.sleep(for: .milliseconds(1600))
             if !Task.isCancelled { copied = nil }
         }
     }
-
-    private var introduction: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            Text("此刻，有了回响。")
-                .font(PoetryTheme.font(31, relativeTo: .largeTitle)).foregroundStyle(CreationPalette.pearl)
-                .accessibilityAddTraits(.isHeader)
-            Text("三种心绪，留一句最像你的。")
-                .font(.subheadline).foregroundStyle(CreationPalette.pearl.opacity(0.85))
-        }.padding(.bottom, 3)
-    }
-
-    private func context(_ input: CreationInput) -> some View {
-        HStack(alignment: .center, spacing: 14) {
-            if let image = input.imageData {
-                PreparedPhoto(data: image, maxPixelSize: 360, contentMode: .fit)
-                    .frame(width: 62, height: 74).background(CreationPalette.ocean.opacity(0.5))
-                    .clipShape(RoundedRectangle(cornerRadius: 12)).accessibilityLabel("本次创作的照片")
+    private func copy(_ line: SentenceVersion) { UIPasteboard.general.string = line.text; copied = line.id; store.notice = "已复制" }
+    private var generating: some View {
+        VStack(spacing: 20) {
+            ProgressView("正在生成三句…").frame(maxWidth: .infinity).padding(.vertical, 16)
+            ForEach(WritingStyle.allCases) { style in
+                Surface { VStack(alignment: .leading, spacing: 20) { Text(style.title).font(.footnote.weight(.semibold)).foregroundStyle(SanjuTheme.secondaryText); SentencePlaceholder() } }
             }
-            VStack(alignment: .leading, spacing: 8) {
-                Text(input.summary).font(.subheadline).lineSpacing(3).lineLimit(3).accessibilityLabel(input.summary)
-                Label(input.mood, systemImage: "heart").font(.caption).foregroundStyle(CreationPalette.pearl.opacity(0.85))
-            }
-            Spacer(minLength: 0)
+            Text("可以先离开此页面。生成完成后会自动保存到句库；网络中断时回来即可找回，不会重复扣除次数。")
+                .font(.footnote).foregroundStyle(SanjuTheme.secondaryText)
         }
-        .foregroundStyle(CreationPalette.pearl).padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(CreationPalette.ocean.opacity(0.45), in: RoundedRectangle(cornerRadius: 20))
-        .overlay { RoundedRectangle(cornerRadius: 20).strokeBorder(CreationPalette.pearl.opacity(0.18), lineWidth: 1) }
-    }
-
-    private func savedStatus(_ record: Creation) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 12) { savedLabel(record); Spacer(minLength: 0); swapCount(record) }
-            VStack(alignment: .leading, spacing: 6) { savedLabel(record); swapCount(record) }
-        }
-        .font(.caption).foregroundStyle(CreationPalette.pearl.opacity(0.9))
-        .padding(.horizontal, 2).padding(.vertical, 3)
-    }
-    private func savedLabel(_ record: Creation) -> some View {
-        Label(store.isSaved(creationID) ? (record.isDemo ? "示例内容 · 已存入句库" : "已存入句库") : "尚未保存，可以先复制", systemImage: store.isSaved(creationID) ? "checkmark.circle" : "exclamationmark.triangle")
-    }
-    private func swapCount(_ record: Creation) -> some View {
-        Text(record.expiresAt > Date() ? "还可换 \(record.swapsRemaining) 句" : "换句机会已到期")
-    }
-
-    private func sentenceCard(_ record: Creation, line: SentenceVersion) -> some View {
-        let swapping = pending?.style == line.style && store.isBusy
-        return PoetrySurface(color: PoetryTheme.paper(line.style)) {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 7) {
-                        HStack(spacing: 10) {
-                            Text(PoetryTheme.number(line.style)).font(.caption.monospacedDigit()).foregroundStyle(CreationPalette.mutedInk)
-                            PoetryStyleLabel(style: line.style)
-                        }
-                        Text(line.style.subtitle).font(.caption).foregroundStyle(CreationPalette.mutedInk)
-                    }
-                    Spacer(minLength: 0)
-                    Button { Task { await store.toggleFavorite(creationID: creationID, sentenceID: line.id) } } label: {
-                        Image(systemName: line.favoritedAt == nil ? "bookmark" : "bookmark.fill")
-                            .font(.system(size: 18)).frame(width: 44, height: 44)
-                            .background(PoetryTheme.accent(line.style).opacity(line.favoritedAt == nil ? 0.04 : 0.12), in: Circle())
-                    }
-                    .buttonStyle(CreationPressStyle()).foregroundStyle(PoetryTheme.accent(line.style))
-                    .disabled(!store.isSaved(creationID))
-                    .accessibilityLabel(line.favoritedAt == nil ? "收藏\(line.style.title)这句" : "取消收藏\(line.style.title)这句")
-                }
-                Text(line.text).font(PoetryTheme.font(23, relativeTo: .title3)).lineSpacing(9)
-                    .foregroundStyle(CreationPalette.ink).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                    .contentTransition(.opacity).animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: line.id)
-                    .padding(.vertical, 2)
-                Rectangle().fill(PoetryTheme.accent(line.style).opacity(0.13)).frame(height: 1)
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 8) { copyButton(line); swapButton(record, line: line, swapping: swapping); Spacer(minLength: 0); moreMenu(line) }
-                    VStack(alignment: .leading, spacing: 8) { copyButton(line); swapButton(record, line: line, swapping: swapping); moreMenu(line) }
-                }
-                .font(.subheadline)
-            }
-        }.sensoryFeedback(.selection, trigger: line.favoritedAt)
-    }
-    private func copyButton(_ line: SentenceVersion) -> some View {
-        Button { UIPasteboard.general.string = line.text; copied = line.id; store.notice = "已复制" } label: {
-            Label(copied == line.id ? "已复制" : "复制", systemImage: copied == line.id ? "checkmark" : "doc.on.doc")
-                .fixedSize(horizontal: true, vertical: false).padding(.horizontal, 14).frame(minHeight: 44)
-                .foregroundStyle(CreationPalette.pearl).background(CreationPalette.ink, in: Capsule())
-        }.buttonStyle(CreationPressStyle())
-    }
-    private func swapButton(_ record: Creation, line: SentenceVersion, swapping: Bool) -> some View {
-        Button { Task { await store.replace(creationID, style: line.style) } } label: {
-            HStack(spacing: 6) {
-                if swapping { ProgressView().tint(CreationPalette.ink) }
-                else { Image(systemName: "arrow.triangle.2.circlepath").font(.caption) }
-                Text(swapping ? "正在换…" : "换这句")
-            }
-            .fixedSize(horizontal: true, vertical: false).padding(.horizontal, 12).frame(minHeight: 44)
-            .foregroundStyle(CreationPalette.ink.opacity(store.canSwap(record) || swapping ? 1 : 0.42))
-            .background(CreationPalette.ink.opacity(0.055), in: Capsule())
-        }.buttonStyle(CreationPressStyle()).disabled(!store.canSwap(record))
-    }
-    private func moreMenu(_ line: SentenceVersion) -> some View {
-        Menu {
-            ShareLink(item: line.text) { Label("分享文字", systemImage: "square.and.arrow.up") }
-            Button("查看本次旧句", systemImage: "clock.arrow.circlepath") { historyStyle = line.style }
-            if !store.isDemo { Button("反馈这份创作", systemImage: "exclamationmark.bubble") { showingFeedback = true } }
-        } label: {
-            Image(systemName: "ellipsis").font(.headline).foregroundStyle(CreationPalette.ink).frame(width: 44, height: 44)
-        }.accessibilityLabel("\(line.style.title)更多操作")
-    }
-    private func footer(_ record: Creation) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if record.swapsRemaining == 0 {
-                Text("本次换句已用完，仍可复制、收藏或分享。").font(.footnote)
-            }
-            Button { editInput() } label: {
-                Label("用这个画面再写", systemImage: "square.and.pencil")
-                    .font(.subheadline.weight(.medium)).frame(maxWidth: .infinity, minHeight: 50)
-                    .background(CreationPalette.pearl.opacity(0.1), in: RoundedRectangle(cornerRadius: 18))
-                    .overlay { RoundedRectangle(cornerRadius: 18).strokeBorder(CreationPalette.pearl.opacity(0.3), lineWidth: 1) }
-            }.buttonStyle(CreationPressStyle())
-            Text("调整后再次生成，会使用一次新的创作额度。").font(.caption)
-        }.foregroundStyle(CreationPalette.pearl.opacity(0.9)).padding(.top, 4)
     }
     private func recovery(_ pending: PendingGeneration) -> some View {
-        PoetrySurface {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("先找回这次结果，避免重复使用额度。").font(.footnote).foregroundStyle(CreationPalette.mutedInk)
-                if store.requiresInvitation && !store.hasAccess {
-                    PrimaryButton(title: "输入邀请码，确认结果") { showingAccess = true }
-                } else { PrimaryButton(title: "确认这次结果") { Task { await store.recover() } } }
-            }.tint(CreationPalette.ink)
+        Surface {
+            VStack(spacing: 12) {
+                ContentUnavailableView(store.hasAccess ? "网络中断，结果待确认" : "重新加入内测，找回结果", systemImage: "wifi.slash", description: Text("请求已经发出，三句可能已经写好。找回结果只查询这次请求，不会重新生成，也不会重复扣次数。"))
+                PrimaryButton(title: store.hasAccess ? "找回结果" : "输入邀请码", busy: store.isBusy, disabled: store.isBusy) {
+                    if !store.hasAccess { showingAccess = true } else { Task { await store.recover() } }
+                }
+                if let showLibrary { Button("稍后在句库查看", action: showLibrary).frame(minHeight: 44) }
+            }
         }
     }
 }
 
-private struct SentenceHistoryView: View {
+private struct SentenceResultCard: View {
+    @Environment(AppStore.self) private var store
+    @Environment(\.dynamicTypeSize) private var dynamicType
+    let record: Creation
+    let line: SentenceVersion
+    let pending: PendingGeneration?
+    let failed: Bool
+    let copied: Bool
+    var copy: () -> Void
+    private var swapping: Bool { pending?.style == line.style && store.isBusy }
+    private var unavailable: String? {
+        if record.expiresAt <= Date() { return "换句已过期" }
+        if record.swapsRemaining == 0 { return "换句次数已用完" }
+        return nil
+    }
+    var body: some View {
+        Surface {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(line.style.title).font(.footnote.weight(.semibold)).foregroundStyle(SanjuTheme.secondaryText)
+                    .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                    .overlay(alignment: .trailing) {
+                    FavoriteButton(line: line, disabled: !store.isSaved(record.id)) { Task { await store.toggleFavorite(creationID: record.id, sentenceID: line.id) } }
+                    }
+                Group {
+                    if swapping { SentencePlaceholder() }
+                    else { SentenceText(text: line.text).id(line.id).transition(.opacity) }
+                }.frame(minHeight: 64, alignment: .topLeading)
+                if failed { Text("没换成，原句已保留。" + (store.failureDescription ?? "请稍后重试。" )).font(.footnote).foregroundStyle(SanjuTheme.secondaryText) }
+                if dynamicType.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 4) { copyButton; shareButton; swapButton }
+                } else {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 16) { copyButton; shareButton; Spacer(minLength: 0); swapButton }
+                        VStack(alignment: .leading, spacing: 0) { HStack(spacing: 16) { copyButton; shareButton }; swapButton }
+                    }
+                }
+            }
+        }
+    }
+    private var copyButton: some View {
+        Button(action: copy) { Label(copied ? "已复制" : "复制", systemImage: copied ? "checkmark" : "doc.on.doc").frame(minHeight: 44) }.buttonStyle(.plain).foregroundStyle(SanjuTheme.accent)
+    }
+    private var shareButton: some View {
+        ShareLink(item: line.text) { Label("分享", systemImage: "square.and.arrow.up").frame(minHeight: 44) }.buttonStyle(.plain).foregroundStyle(SanjuTheme.accent)
+    }
+    private var swapButton: some View {
+        Button { Task { await store.replace(record.id, style: line.style) } } label: {
+            HStack(spacing: 5) {
+                if swapping { ProgressView() }
+                else if unavailable == nil { Image(systemName: "arrow.triangle.2.circlepath") }
+                Text(swapping ? "正在换…" : unavailable ?? (failed ? "重试" : "换一句"))
+            }.font(unavailable == nil ? .body : .footnote).frame(minHeight: 44)
+        }.buttonStyle(.plain).foregroundStyle(unavailable == nil ? SanjuTheme.accent : SanjuTheme.secondaryText)
+            .disabled(!store.canSwap(record)).accessibilityIdentifier("swap_" + line.style.rawValue)
+    }
+}
+
+struct SentencePlaceholder: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            RoundedRectangle(cornerRadius: 4).fill(Color(uiColor: .systemGray5)).frame(height: 18)
+            RoundedRectangle(cornerRadius: 4).fill(Color(uiColor: .systemGray5)).frame(maxWidth: 190).frame(height: 18)
+        }.frame(maxWidth: .infinity, minHeight: 64, alignment: .leading).accessibilityLabel("正在写这句")
+    }
+}
+
+private struct SentenceArrival: ViewModifier {
+    let delay: Double
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = false
+    func body(content: Content) -> some View {
+        content.opacity(appeared ? 1 : 0).offset(y: appeared || reduceMotion ? 0 : 8)
+            .task { withAnimation(.easeOut(duration: 0.25).delay(delay)) { appeared = true } }
+    }
+}
+
+struct SentenceHistoryView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     let creationID: UUID
-    let style: WritingStyle
-    private var record: Creation? { store.record(creationID) }
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 16) {
-                    Text("每一句，都有来处。")
-                        .font(PoetryTheme.font(27, relativeTo: .title)).padding(.bottom, 2)
-                    Text("恢复旧句不会使用换句次数，收藏也会保留。")
-                        .font(.caption).foregroundStyle(CreationPalette.mutedInk)
-                    if let record {
-                        ForEach(record.versions.filter { $0.style == style }.reversed()) { line in
-                            let current = record.current(style)?.id == line.id
-                            PoetrySurface(color: PoetryTheme.paper(style)) {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    HStack {
-                                        Text(line.createdAt.formatted(date: .omitted, time: .shortened)).font(.caption).foregroundStyle(CreationPalette.mutedInk)
-                                        Spacer()
-                                        if line.favoritedAt != nil { Label("已收藏", systemImage: "bookmark.fill").font(.caption).foregroundStyle(PoetryTheme.accent(style)) }
+                VStack(alignment: .leading, spacing: 24) {
+                    Label("恢复旧句不消耗换句次数", systemImage: "checkmark.circle")
+                        .font(.subheadline).foregroundStyle(SanjuTheme.accent).padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(SanjuTheme.tintSoft, in: RoundedRectangle(cornerRadius: 16))
+                    if let record = store.record(creationID) {
+                        ForEach(WritingStyle.allCases) { style in
+                            VStack(spacing: 8) {
+                                SectionHeading(title: style.title)
+                                Surface {
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        if let current = record.current(style) {
+                                            historyText(current)
+                                            HStack { MoodLabel(text: "当前"); favoriteLabel(current) }
+                                        }
+                                        let old = record.versions.filter { $0.style == style && $0.id != record.current(style)?.id }.sorted { ($0.replacedAt ?? $0.createdAt) > ($1.replacedAt ?? $1.createdAt) }
+                                        if old.isEmpty { Text("还没有换过").font(.subheadline).foregroundStyle(SanjuTheme.secondaryText) }
+                                        ForEach(old) { line in
+                                            Divider()
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                historyText(line)
+                                                ViewThatFits(in: .horizontal) {
+                                                    HStack { versionMetadata(line); Spacer(minLength: 8); restoreButton(line) }
+                                                    VStack(alignment: .leading) { versionMetadata(line); restoreButton(line) }
+                                                }
+                                            }
+                                        }
                                     }
-                                    Text(line.text).font(PoetryTheme.font(21, relativeTo: .title3)).lineSpacing(7).textSelection(.enabled)
-                                    Button {
-                                        Task { await store.selectVersion(creationID: creationID, sentenceID: line.id); dismiss() }
-                                    } label: {
-                                        Text(current ? "当前句子" : "用这一句")
-                                            .foregroundStyle(current ? CreationPalette.mutedInk : CreationPalette.pearl)
-                                    }
-                                    .font(.subheadline.weight(.medium)).frame(minHeight: 44).buttonStyle(.borderedProminent)
-                                    .tint(CreationPalette.ink).disabled(current)
                                 }
                             }
                         }
                     }
-                }.padding(22)
+                    Text("旧句跟随这次创作一起保存在句库。收藏过的句子即使被换下，也会一直留在「收藏」里。")
+                        .font(.footnote).foregroundStyle(SanjuTheme.secondaryText)
+                }.padding(20)
+            }.background(SanjuTheme.background).navigationTitle("旧句").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() }.accessibilityIdentifier("dismissSentenceHistory") } }
+        }.presentationDetents([.large]).presentationDragIndicator(.visible)
+    }
+    private func historyText(_ line: SentenceVersion) -> some View { SentenceText(text: line.text, size: 18, relativeTo: .body) }
+    private func favoriteLabel(_ line: SentenceVersion) -> some View {
+        Group {
+            if line.favoritedAt != nil {
+                HStack(spacing: 4) { Image(systemName: "star.fill").foregroundStyle(SanjuTheme.favorite); Text("已收藏").foregroundStyle(SanjuTheme.secondaryText) }
             }
-            .foregroundStyle(CreationPalette.ink).background { PoetryPaperBackground() }
-            .navigationTitle("\(style.title)的本次版本").navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(PoetryTheme.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar).toolbarColorScheme(.light, for: .navigationBar)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("完成") { dismiss() }.foregroundStyle(CreationPalette.ink).accessibilityIdentifier("dismissSentenceHistory") } }
-            .tint(CreationPalette.ink)
+        }.font(.footnote)
+    }
+    private func versionMetadata(_ line: SentenceVersion) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text((line.replacedAt == nil ? "生成于 " : "换下于 ") + (line.replacedAt ?? line.createdAt).formatted(date: .omitted, time: .shortened))
+                .font(.footnote).foregroundStyle(SanjuTheme.secondaryText)
+            favoriteLabel(line)
         }
+    }
+    private func restoreButton(_ line: SentenceVersion) -> some View {
+        Button("恢复") { Task { await store.selectVersion(creationID: creationID, sentenceID: line.id) } }
+            .buttonStyle(.bordered).buttonBorderShape(.capsule).frame(minHeight: 44).disabled(!store.isSaved(creationID))
+            .accessibilityIdentifier("restore_" + line.style.rawValue)
     }
 }

@@ -62,6 +62,7 @@ final class AppStoreTests: XCTestCase {
         let changed = try XCTUnwrap(store.record(id)?.current(.cool))
         XCTAssertNotEqual(original.text, changed.text)
         XCTAssertEqual(store.record(id)?.swapsRemaining, 2)
+        XCTAssertNotNil(store.record(id)?.versions.first(where: { $0.id == original.id })?.replacedAt)
         XCTAssertEqual(store.state.quota?.remaining, 4)
         XCTAssertEqual(store.record(id)?.versions.first(where: { $0.id == original.id })?.favoritedAt != nil, true)
         await store.selectVersion(creationID: id, sentenceID: original.id)
@@ -79,6 +80,8 @@ final class AppStoreTests: XCTestCase {
         XCTAssertEqual(store.draft.scene, "咖啡")
         XCTAssertEqual(store.state.quota?.remaining, 5)
         XCTAssertNil(store.pending)
+        XCTAssertEqual(store.failedOperation?.input.scene, "咖啡")
+        XCTAssertEqual(store.failureDescription, "写手暂时不可用")
     }
     @MainActor func testUnknownResultRemainsRecoverableAndBlocksNewCreation() async {
         let disk = MemoryPersistence()
@@ -211,6 +214,32 @@ final class AppStoreTests: XCTestCase {
         let restored = await AppStore(persistence: disk, service: StubService())
         XCTAssertEqual(restored.draft, latest)
         XCTAssertEqual(restored.records.first?.input.scene, "海边")
+    }
+    @MainActor func testSwapFailureRetainsCurrentFavoriteAndReportsCorrectCard() async throws {
+        let disk = MemoryPersistence()
+        let store = await AppStore(persistence: disk, service: StubService())
+        store.updateDraft(.init(scene: "海边", mood: "平静"))
+        let createdID = await store.startCreation()
+        let id = try XCTUnwrap(createdID)
+        let line = try XCTUnwrap(store.record(id)?.current(.cool))
+        await store.toggleFavorite(creationID: id, sentenceID: line.id)
+        let failed = await AppStore(persistence: disk, service: StubService(fail: .message("模型暂时不可用")))
+        await failed.replace(id, style: .cool)
+        XCTAssertEqual(failed.record(id)?.current(.cool)?.id, line.id)
+        XCTAssertNotNil(failed.record(id)?.current(.cool)?.favoritedAt)
+        XCTAssertEqual(failed.record(id)?.swapsRemaining, 3)
+        XCTAssertNil(failed.pending)
+        XCTAssertEqual(failed.failedOperation?.style, .cool)
+        XCTAssertEqual(failed.failedOperation?.creationId, id)
+    }
+    func testExistingLibraryWithoutReplacementDatesStillLoads() throws {
+        let line = SentenceVersion(style: .cool, text: "旧版收藏", favoritedAt: Date())
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(line)) as? [String: Any])
+        object.removeValue(forKey: "replacedAt")
+        let restored = try JSONDecoder().decode(SentenceVersion.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(restored.id, line.id)
+        XCTAssertEqual(restored.favoritedAt, line.favoritedAt)
+        XCTAssertNil(restored.replacedAt)
     }
     func testAtomicFileRoundTripAndCorruptionIsReported() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

@@ -1,5 +1,6 @@
 import SwiftUI
 import SanjuCore
+import Network
 
 @main struct SanjuApp: App {
     private let persistence: FileLibraryPersistence
@@ -35,7 +36,17 @@ import SanjuCore
         let requiresInvitation = true
         let credentialAccount = "session"
         #endif
+        #if DEBUG
+        if let index = arguments.firstIndex(of: "--test-scenario"), arguments.indices.contains(index + 1),
+           let mode = UITestGenerationService.Mode(rawValue: arguments[index + 1]),
+           let libraryIndex = arguments.firstIndex(of: "--test-library"), arguments.indices.contains(libraryIndex + 1), UUID(uuidString: arguments[libraryIndex + 1]) != nil {
+            service = UITestGenerationService(mode: mode)
+        } else {
+            service = demo ? DemoGenerationService() : LiveGenerationService(baseURL: base, installationID: identity, credentials: SessionVault(account: credentialAccount), requiresInvitation: requiresInvitation)
+        }
+        #else
         service = demo ? DemoGenerationService() : LiveGenerationService(baseURL: base, installationID: identity, credentials: SessionVault(account: credentialAccount), requiresInvitation: requiresInvitation)
+        #endif
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Sanju", isDirectory: true)
         let storage: URL
         #if DEBUG
@@ -47,7 +58,23 @@ import SanjuCore
         #endif
         persistence = FileLibraryPersistence(url: storage)
     }
-    var body: some Scene { WindowGroup { AppBootstrapView(persistence: persistence, service: service) } }
+    var body: some Scene {
+        WindowGroup {
+            #if DEBUG
+            AppBootstrapView(persistence: persistence, service: service).preferredColorScheme(testAppearance)
+            #else
+            AppBootstrapView(persistence: persistence, service: service)
+            #endif
+        }
+    }
+    #if DEBUG
+    private var testAppearance: ColorScheme? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let library = arguments.firstIndex(of: "--test-library"), arguments.indices.contains(library + 1), UUID(uuidString: arguments[library + 1]) != nil,
+              let style = arguments.firstIndex(of: "--test-appearance"), arguments.indices.contains(style + 1) else { return nil }
+        return arguments[style + 1] == "dark" ? .dark : .light
+    }
+    #endif
 }
 
 struct AppBootstrapView: View {
@@ -75,16 +102,15 @@ struct AppRootView: View {
             NavigationStack(path: $creationPath) {
                 CreationView(openResult: openResult)
                     .navigationDestination(for: UUID.self) { id in
-                        ResultView(creationID: id, editInput: { edit(id) })
+                        ResultView(creationID: id, editInput: { edit(id) }, showLibrary: { selectedTab = 1 })
                     }
-                    .toolbar { ToolbarItem(placement: .topBarTrailing) { settingsButton } }
             }
             .tabItem { Label("创作", systemImage: "square.and.pencil") }.tag(0)
             NavigationStack {
                 LibraryView(startCreation: { selectedTab = 0; creationPath = [] }, editInput: edit)
                     .toolbar { ToolbarItem(placement: .topBarTrailing) { settingsButton } }
             }
-            .tabItem { Label("句库", systemImage: "bookmark") }.tag(1)
+            .tabItem { Label("句库", systemImage: "book.closed") }.tag(1)
         }
         .sheet(isPresented: $showingSettings) { SettingsView() }
         .alert("提示", isPresented: Binding(get: { store.errorMessage != nil }, set: { if !$0 { store.errorMessage = nil } })) {
@@ -100,12 +126,25 @@ struct AppRootView: View {
         }
         .task(id: store.notice) {
             guard store.notice != nil else { return }
-            try? await Task.sleep(for: .seconds(2))
+            UIAccessibility.post(notification: .announcement, argument: store.notice)
+            try? await Task.sleep(for: .milliseconds(1600))
             if !Task.isCancelled { store.notice = nil }
         }
         .task {
             await store.refresh()
             if let pending = store.pending { openResult(pending.creationId); await store.recover() }
+        }
+        .task {
+            let monitor = NWPathMonitor()
+            let updates = AsyncStream<Bool> { continuation in
+                monitor.pathUpdateHandler = { continuation.yield($0.status == .satisfied) }
+                continuation.onTermination = { _ in monitor.cancel() }
+                monitor.start(queue: DispatchQueue(label: "sanju.connectivity"))
+            }
+            for await connected in updates {
+                if Task.isCancelled { break }
+                if connected && store.pending != nil && !store.isBusy { await store.recover() }
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await store.refresh(); if store.pending != nil { await store.recover() } } }
@@ -125,6 +164,6 @@ struct AppRootView: View {
         Button("设置", systemImage: "slider.horizontal.3") { showingSettings = true }
             .labelStyle(.iconOnly).accessibilityLabel("设置")
     }
-    private func openResult(_ id: UUID) { selectedTab = 0; if creationPath.last != id { creationPath.append(id) } }
-    private func edit(_ id: UUID) { store.edit(id); selectedTab = 0; creationPath = [] }
+    private func openResult(_ id: UUID) { selectedTab = 0; if creationPath.last != id { creationPath = [id] } }
+    private func edit(_ id: UUID) { if store.record(id) != nil { store.edit(id) }; selectedTab = 0; creationPath = [] }
 }

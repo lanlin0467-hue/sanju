@@ -1,0 +1,59 @@
+{
+  "name": "三句 Sanju · Design Tokens",
+  "version": "1.0.0",
+  "updated": "2026-10-19",
+  "platform": "iOS 17+ / SwiftUI",
+  "color": {
+    "tint":             { "light": "#1F6F78", "dark": "#5CC2CB", "asset": "AccentColor", "use": "主按钮、选中、链接" },
+    "tintSoft":         { "light": "#1F6F781F", "dark": "#5CC2CB33", "asset": "TintSoft", "use": "次按钮底、心情标签、提示条（12% / 20%）" },
+    "favorite":         { "light": "#E06A50", "dark": "#FF8A70", "asset": "Favorite", "use": "仅收藏星标" },
+    "destructive":      { "light": "#D70015", "dark": "#FF6961", "asset": "Destructive", "use": "删除" },
+    "secondaryText":    { "light": "#6C6C70", "dark": "#AEAEB2", "asset": "SecondaryText", "use": "分组标题、说明、时间（替代系统 .secondary 以满足 4.5:1）" },
+    "groupedBackground":{ "light": "#F2F2F7", "dark": "#000000", "system": "systemGroupedBackground" },
+    "surface":          { "light": "#FFFFFF", "dark": "#1C1C1E", "system": "secondarySystemGroupedBackground" },
+    "label":            { "light": "#1C1C1E", "dark": "#FFFFFF", "system": "label" },
+    "fill":             { "light": "#7676801F", "dark": "#7676803D", "system": "tertiarySystemFill" },
+    "separator":        { "light": "#C6C6C8", "dark": "#38383A", "system": "separator" },
+    "placeholderBar":   { "light": "#E5E5EA", "dark": "#2C2C2E", "system": "systemGray5", "use": "换句中 / 生成中占位条" }
+  },
+  "typography": {
+    "ui": {
+      "family": "系统字体（SF Pro + 苹方）",
+      "largeTitle":  { "size": 34, "lineHeight": 41, "weight": "bold",     "swiftUI": ".largeTitle.bold()" },
+      "title2":      { "size": 22, "lineHeight": 28, "weight": "bold",     "swiftUI": ".title2.bold()" },
+      "headline":    { "size": 17, "lineHeight": 22, "weight": "semibold", "swiftUI": ".headline" },
+      "body":        { "size": 17, "lineHeight": 22, "weight": "regular",  "swiftUI": ".body" },
+      "subheadline": { "size": 15, "lineHeight": 20, "weight": "regular",  "swiftUI": ".subheadline" },
+      "footnote":    { "size": 13, "lineHeight": 18, "weight": "regular",  "swiftUI": ".footnote" },
+      "caption":     { "size": 12, "lineHeight": 16, "weight": "regular",  "swiftUI": ".caption" }
+    },
+    "sentence": {
+      "family": "Noto Serif SC / 思源宋体 Medium（打包子集，SIL OFL）",
+      "detail": { "size": 25, "lineHeight": 40, "relativeTo": ".title" },
+      "result": { "size": 20, "lineHeight": 32, "relativeTo": ".title3" },
+      "list":   { "size": 16, "lineHeight": 24, "relativeTo": ".body", "maxLines": 2 },
+      "rules": ["行高约 1.6 倍", "结果页/详情页在最接近中点的逗号处断行", "行首不出现标点", "宋体只用于句子"]
+    }
+  },
+  "spacing": { "xxs": 4, "xs": 8, "sm": 12, "md": 16, "screenMargin": 20, "section": 24, "minTouch": 44 },
+  "radius": { "card": 22, "sheet": 38, "alert": 34, "notice": 16, "thumbnail": 10, "photoInCard": 0, "capsule": "height / 2", "style": "continuous" },
+  "size": { "primaryButtonHeight": 50, "chipHeight": 44, "photoHeight": 160, "photoHeightSmallScreen": 120, "detailPhotoHeight": 168, "listThumbnail": 52, "resultThumbnail": 48 },
+  "motion": {
+    "duration": { "min": 0.2, "max": 0.35 },
+    "curve": [".smooth", ".snappy"],
+    "sentenceAppear": { "opacity": [0, 1], "offsetY": [8, 0], "stagger": 0.08 },
+    "favoriteBounce": { "scale": 1.15, "haptic": ".impact(weight: .light)" },
+    "moodSelect": { "haptic": ".selection" },
+    "toastDuration": 1.6,
+    "reduceMotion": "取消位移与缩放，只保留淡入淡出"
+  },
+  "rules": {
+    "sceneTextMax": 200,
+    "customMoodMax": 30,
+    "swapsPerCreation": 3,
+    "swapWindowHours": 24,
+    "restoreCostsSwap": false,
+    "chargeOnlyOnSuccess": true,
+    "storage": "本机 SwiftData，无云同步"
+  }
+}

@@ -52,19 +52,32 @@ final class LiveServiceTests: XCTestCase {
             catch { XCTAssertEqual(error as? GenerationError,expected) }
         }
     }
-    func testUnknownRequestResendsSameOperationAfterLookup() async throws {
-        let vault=MemorySessionCredentials(); await vault.save(.init(token:"token",expiresAt:.distantFuture))
-        let op=PendingGeneration(creationId:UUID(),input:.init(scene:"黄昏海边",mood:"平静",imageData:Data([1,2,3])))
+    func testRecoveryOnlyQueriesOriginalRequestAndNeverResubmitsMissingRequest() async throws {
+        let vault = MemorySessionCredentials()
+        await vault.save(.init(token: "token", expiresAt: .distantFuture))
+        let op = PendingGeneration(creationId: UUID(), input: .init(scene: "黄昏海边", mood: "平静"))
         WireStub.handle { request in
-            if request.httpMethod == "GET" {
-                XCTAssertTrue(request.url!.query!.contains(op.requestId.uuidString)); return (404,Data())
-            }
-            XCTAssertEqual(request.httpMethod,"POST")
-            XCTAssertEqual(request.value(forHTTPHeaderField:"Authorization"),"Bearer token")
-            let reply=GenerationReply(creationId:op.creationId,lines:WritingStyle.allCases.map { .init(style:$0,text:DemoGenerationService.samples[$0]![0]) },swapsRemaining:3,expiresAt:.distantFuture)
-            let encoder=JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
-            return (200,try encoder.encode(reply))
+            XCTAssertEqual(request.httpMethod, "GET", "Finding a result must not initiate generation")
+            let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems
+            XCTAssertEqual(query?.first(where: { $0.name == "requestId" })?.value, op.requestId.uuidString)
+            XCTAssertNil(request.httpBody)
+            return (404, Data())
         }
-        let result=try await service(vault).recover(op); XCTAssertEqual(result.creationId,op.creationId)
+        do { _ = try await service(vault).recover(op); XCTFail("Expected missing request") }
+        catch { XCTAssertEqual(error as? GenerationError, .missing) }
+    }
+    func testRecoveryReturnsStoredResultWithoutPostingAgain() async throws {
+        let vault = MemorySessionCredentials()
+        await vault.save(.init(token: "token", expiresAt: .distantFuture))
+        let op = PendingGeneration(creationId: UUID(), input: .init(scene: "海边", mood: "平静"))
+        WireStub.handle { request in
+            XCTAssertEqual(request.httpMethod, "GET")
+            let reply = GenerationReply(creationId: op.creationId, lines: WritingStyle.allCases.map { .init(style: $0, text: DemoGenerationService.samples[$0]![0]) }, swapsRemaining: 3, expiresAt: .distantFuture)
+            let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+            return (200, try encoder.encode(reply))
+        }
+        let result = try await service(vault).recover(op)
+        XCTAssertEqual(result.creationId, op.creationId)
+        XCTAssertEqual(result.lines.count, 3)
     }
 }

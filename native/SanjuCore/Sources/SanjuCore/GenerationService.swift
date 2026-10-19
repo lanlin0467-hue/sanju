@@ -108,8 +108,9 @@ public struct LiveGenerationService: GenerationService {
     public func recover(_ operation: PendingGeneration) async throws -> GenerationReply {
         var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "requestId", value: operation.requestId.uuidString)]
-        do { return try await send(try await request(url: components.url!)) }
-        catch GenerationError.missing { return try await perform(operation) }
+        // Recovery only looks up the original request. A missing request must
+        // never turn this user action into a new paid generation.
+        return try await send(try await request(url: components.url!))
     }
     public func quota() async throws -> CreationQuota? {
         let reply: QuotaReply = try await send(try await request(url: endpoint))

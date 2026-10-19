@@ -5,26 +5,32 @@ enum SanjuTheme {
     static let accent = Color("AccentColor")
     static let background = Color(uiColor: .systemGroupedBackground)
     static let surface = Color(uiColor: .secondarySystemGroupedBackground)
+    static let secondaryText = Color("SecondaryText")
+    static let tintSoft = Color("TintSoft")
+    static let favorite = Color("Favorite")
+    static let destructive = Color("Destructive")
+    static let fill = Color(uiColor: .tertiarySystemFill)
     static let radius: CGFloat = 22
 }
 
 struct Surface<Content: View>: View {
     @ViewBuilder var content: Content
-    var body: some View { content.padding(18).background(SanjuTheme.surface, in: RoundedRectangle(cornerRadius: SanjuTheme.radius)) }
+    var body: some View { content.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(SanjuTheme.surface, in: RoundedRectangle(cornerRadius: SanjuTheme.radius, style: .continuous)) }
 }
 
 struct PrimaryButton: View {
+    @Environment(\.colorScheme) private var colorScheme
     let title: String
     var busy = false
     var disabled = false
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) { if busy { ProgressView().tint(.white) }; Text(title).fontWeight(.semibold) }
-                .frame(maxWidth: .infinity).padding(.vertical, 8)
+            HStack(spacing: 8) { if busy { ProgressView().tint(colorScheme == .dark ? .black : .white) }; Text(title).fontWeight(.semibold) }
+                .foregroundStyle(disabled ? SanjuTheme.secondaryText : colorScheme == .dark ? .black : .white)
+                .frame(maxWidth: .infinity, minHeight: 36)
         }
-        .buttonStyle(.borderedProminent).controlSize(.large)
-        .buttonBorderShape(.roundedRectangle(radius: 17)).disabled(disabled)
+        .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).disabled(disabled)
     }
 }
 
@@ -42,6 +48,6 @@ struct PhotoPreview: View {
 struct DemoBadge: View {
     var body: some View {
         Label("示例体验 · 固定文案，不调用 AI", systemImage: "sparkle")
-            .font(.caption).foregroundStyle(.secondary).padding(.vertical, 8)
+            .font(.caption).foregroundStyle(SanjuTheme.secondaryText).padding(.vertical, 4)
     }
 }

@@ -11,6 +11,8 @@ import Observation
     public private(set) var hasAccess = false
     public var requiresInvitation: Bool { service.requiresInvitation }
     public private(set) var isBusy = false
+    public private(set) var failedOperation: PendingGeneration?
+    public private(set) var failureDescription: String?
     public private(set) var loadFailed = false
     public private(set) var unsavedRecords: [UUID: Creation] = [:]
     public var errorMessage: String?
@@ -79,7 +81,10 @@ import Observation
         }
     }
     @discardableResult public func flushDraft() async -> Bool {
-        await mutate { next in next.draft = self.draft; return true }
+        await mutate { next in
+            if next.draft != self.draft { next.draftUpdatedAt = self.draft.isEmpty ? nil : self.now() }
+            next.draft = self.draft; return true
+        }
     }
     public func acceptConsent() async -> Bool { await mutate { $0.consentVersion = Self.consentVersion; return true } }
     public func revokeConsent() async {
@@ -125,6 +130,7 @@ import Observation
         guard hasConsent || isDemo else { errorMessage = "请先同意 AI 数据处理说明。"; return nil }
         // Reserve immediately, before either quota refresh or storage can suspend.
         isBusy = true
+        failedOperation = nil; failureDescription = nil
         defer { isBusy = false }
         await refresh()
         let id = UUID()
@@ -133,6 +139,7 @@ import Observation
             guard next.pending == nil else { return false }
             guard self.hasConsent || self.isDemo else { self.errorMessage = "请先同意 AI 数据处理说明。"; return false }
             if let quota = next.quota, quota.remaining <= 0 { self.errorMessage = "今天的创作次数已用完，明天 00:00 恢复。"; return false }
+            if next.draft != self.draft { next.draftUpdatedAt = self.now() }
             next.draft = self.draft; next.pending = operation; return true
         }) else { return nil }
         await run(operation, recovering: false)
@@ -142,6 +149,7 @@ import Observation
         guard let record = record(id), canSwap(record) else { return }
         guard hasConsent || isDemo else { errorMessage = "请先在设置中查看并同意 AI 数据处理说明。"; return }
         isBusy = true
+        failedOperation = nil; failureDescription = nil
         defer { isBusy = false }
         let operation = PendingGeneration(creationId: id, input: record.input, style: style, previous: record.versions.filter { $0.style == style }.map(\.text), startedAt: now())
         guard await mutate({ next in
@@ -165,6 +173,10 @@ import Observation
             var generated: Creation?
             let saved = await mutate { next in
                 if let style = operation.style, let index = next.records.firstIndex(where: { $0.id == operation.creationId }) {
+                    if let currentID = next.records[index].current(style)?.id,
+                       let previousIndex = next.records[index].versions.firstIndex(where: { $0.id == currentID }) {
+                        next.records[index].versions[previousIndex].replacedAt = self.now()
+                    }
                     let line = SentenceVersion(style: style, text: reply.lines[0].text, createdAt: self.now())
                     next.records[index].versions.append(line); next.records[index].selected[style.rawValue] = line.id
                     next.records[index].swapsRemaining = self.isDemo ? max(0, next.records[index].swapsRemaining - 1) : reply.swapsRemaining
@@ -173,6 +185,7 @@ import Observation
                     next.records.insert(record, at: 0)
                     if self.isDemo { let remaining = max(0, (next.quota?.remaining ?? 5) - 1); next.quota?.remaining = remaining }
                     next.draft = self.draft == operation.input ? CreationInput() : self.draft
+                    if next.draft.isEmpty { next.draftUpdatedAt = nil }
                 }
                 if let quota = reply.quota { next.quota = quota }
                 next.pending = nil
@@ -188,9 +201,11 @@ import Observation
             let problem = error as? GenerationError
             if problem == .unauthorized { hasAccess = false }
             if problem != .uncertain && problem != .processing && problem != .unauthorized {
-                await mutate { $0.pending = nil; return true }
+                if await mutate({ $0.pending = nil; return true }) {
+                    failedOperation = operation; failureDescription = error.localizedDescription
+                }
             }
-            errorMessage = error.localizedDescription
+            if problem == .unauthorized { errorMessage = error.localizedDescription }
         }
     }
     private func validate(_ reply: GenerationReply, operation: PendingGeneration) throws {
@@ -217,8 +232,13 @@ import Observation
     public func selectVersion(creationID: UUID, sentenceID: UUID) async {
         if await mutate({ next in
             guard let i = next.records.firstIndex(where: { $0.id == creationID }), let line = next.records[i].versions.first(where: { $0.id == sentenceID }) else { return false }
+            if let currentID = next.records[i].current(line.style)?.id, currentID != sentenceID,
+               let j = next.records[i].versions.firstIndex(where: { $0.id == currentID }) {
+                next.records[i].versions[j].replacedAt = self.now()
+            }
+            if let j = next.records[i].versions.firstIndex(where: { $0.id == sentenceID }) { next.records[i].versions[j].replacedAt = nil }
             next.records[i].selected[line.style.rawValue] = line.id; return true
-        }) { notice = "已恢复这个版本，不消耗次数" }
+        }) { notice = "已恢复，未消耗次数" }
     }
     public func edit(_ id: UUID) { if let record = record(id) { updateDraft(record.input) } }
     public func delete(_ id: UUID) async {
@@ -231,7 +251,9 @@ import Observation
         let originalDraft = draft
         if await mutate({ next in
             guard next.pending == nil else { self.errorMessage = "请先确认当前创作的结果，再清空本地内容。"; return false }
-            next.records = []; next.draft = self.draft == originalDraft ? CreationInput() : self.draft; return true
+            next.records = []; next.draft = self.draft == originalDraft ? CreationInput() : self.draft
+            if next.draft.isEmpty { next.draftUpdatedAt = nil }
+            return true
         }), draft == originalDraft { updateDraft(CreationInput()) }
     }
 }

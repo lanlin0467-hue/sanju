@@ -36,6 +36,7 @@ public struct SentenceVersion: Identifiable, Codable, Equatable, Sendable {
     public var text: String
     public var createdAt: Date
     public var favoritedAt: Date?
+    public var replacedAt: Date?
     public init(id: UUID = UUID(), style: WritingStyle, text: String, createdAt: Date = Date(), favoritedAt: Date? = nil) {
         self.id = id; self.style = style; self.text = text; self.createdAt = createdAt; self.favoritedAt = favoritedAt
     }
@@ -108,6 +109,7 @@ public struct LibraryState: Codable, Equatable, Sendable {
     public var schemaVersion = 1
     public var records: [Creation] = []
     public var draft = CreationInput()
+    public var draftUpdatedAt: Date?
     public var quota: CreationQuota?
     public var pending: PendingGeneration?
     public var consentVersion: String?

@@ -4,6 +4,18 @@
 
 这一版打通创作、生成结果和句库。可准备照片或文字与心情、生成冷峻/浪漫/青春三句、单句替换、复制、系统文字分享、收藏、查看旧句、恢复旧版本，以及搜索和删除本机记录。草稿、照片的压缩副本与句子版本会保存在应用私有目录。
 
+## 当前界面：原生极简版
+
+2026-10-20 按用户提供的「三句_研发交付包」（设计日期 2026-10-19）接入。主题使用系统分组背景、深海青 `AccentColor` 与动态浅深色；界面文字使用系统字体，生成的句子复用已打包且包含许可证的 Sanju Poetry 字体。设计 Token 留存在 `Design/NativeMinimal/design-tokens.json`，颜色并入 `Sanju/Assets.xcassets`。旧水彩背景保留为历史素材，不再作为当前页面背景。
+
+创作页采用大标题、照片/文字合并卡片、流式心情胶囊、自定义心情弹窗与底部胶囊按钮；缺少内容时按钮直接说明原因。草稿可继续或忽略，超过 200 字的画面和 30 字的心情会截断。右上角额度显示服务返回的真实余额，内测规则继续采用每天 5 次、北京时间 00:00 恢复，设计稿中的 7/10 次不写入业务逻辑。
+
+结果页覆盖生成中、明确失败与待确认状态，三种句子共享 3 次换句。旧句统一在一个按文风分组的弹层中查看，恢复不扣次数。句库按日期分组；收藏筛选以句子版本为单位；全部列表优先预览收藏句，搜索可命中历史版本。待确认的新创作也会出现在句库。详情页通过 push 打开并隐藏标签栏，可切换本次三句、复制、分享及确认删除，删除说明包含当前句、旧句和收藏的实际数量。
+
+沿用 JSON 本机存储与异步存储 actor，没有迁移到设计说明建议的 SwiftData。新增草稿时间和旧句换下时间均为可选字段，兼容已有句库；旧记录没有换下时间时显示生成时间。请求恢复现在只用原 requestId 查询，不再在 404 后自动提交生成；网络恢复或回到前台时可自动查询。明确失败保留素材，换句失败保留原句与收藏。保存失败继续允许复制，并显示尚未保存。
+
+隐私弹层保留已实现的 OpenRouter/Qwen 处理链路、服务端 8 天结果恢复及 31 天反馈保留说明，没有照搬设计稿中的占位内容或「只在手机保存」的概括。完整隐私说明已内置在客户端，可离线阅读；线上隐私页与正式后端仍需完成生产部署验收。当前尚未上传 TestFlight。
+
 ## 先运行示例版本
 
 用 Xcode 打开 `native/Sanju.xcodeproj`，评审界面时优先选择 **Sanju Preview** scheme，再选择 iPhone 模拟器运行。它使用开启编译优化的 Preview 配置，不附加调试器；需要断点调试时选择 **Sanju Demo**。Preview 配置默认使用示例服务，从手机桌面重新打开也保持示例模式；Debug 配置仍通过 `--demo` 启动参数选择示例服务。无需模型密钥、网页构建或 Capacitor 同步。
@@ -89,32 +101,27 @@ node_modules/.bin/vite-node --config vitest.config.ts scripts/beta-test-server.t
 
 ## 后续修改界面的位置
 
-创作页已采用原创海底水彩背景、宋体标题、米白便笺和珊瑚色生成按钮。背景与页面调色板集中在 `Sanju/CreationVisuals.swift`；素材和生成提示词见 [CREATION-ART.md](CREATION-ART.md)。背景是静态资源，按压效果尊重「减弱动态效果」，没有持续粒子动画。
-
-点击选图区直接进入系统相册，拍照为独立入口；所选照片完整显示，可更换、移除。读取过程中可取消，新选择或移除会使旧读取结果失效；失败不会覆盖已有照片。画面与心情均可单独清空，输入时显示字数，键盘提供「填写心情」和「完成」，焦点变化时滚动到输入位置。原有草稿保存、邀请码、同意说明和生成流程继续沿用。
-
-中文衬线字体随 App 打包，离线可用；在结果页与句库改版时扩展为基本汉字、拉丁文字及常用标点的阅读字库，约 10.1 MB。心情标签在正常字号下三列排列，辅助字号调整为两列或一列，避免选中标记挤压文字。创作页 4 项相关 UI 用例已分别通过：生成/换句/收藏/重启、相册选择/移除/取消、自定义心情/草稿恢复/清空校验、最大辅助字号输入。报告为 `native/build/WatercolorCreationFlow.xcresult`（两项通过，首次输入用例因两个「完成」按钮定位歧义失败）、`WatercolorInputFlow.xcresult`（添加明确标识后输入用例通过）和 `WatercolorLargeTextFinal.xcresult`。相机、真实 HEIC 与真机键盘体验仍需实际 iPhone 验收。
-
-结果页以冷峻、浪漫、青春的淡纸色卡片呈现三句，复制有即时状态，换句提供等待状态，旧版本页显示当前句子与收藏信息。句库以浅纸色、衬线句子预览、心情和日期显示记录，提供全部/收藏筛选、搜索及空状态。收藏详情可复制、分享及进入本次三句；搜索命中历史文字时，预览会标明旧句。视觉组件集中在 `Sanju/PoetryVisuals.swift`，数据保存与额度逻辑继续复用 SanjuCore。
-
-结果页与句库的本轮 UI 回归已通过：`native/build/PoetryReadingFinal.xcresult` 检查生成、复制、收藏、换句、重启、搜索和详情；`PoetryHistoryFinal.xcresult` 检查独立旧句页的关闭、恢复与返回；`PoetryReadingLargeText.xcresult` 检查最大辅助字号下的结果页与收藏详情。实际截图保存为 `deliverables/sanju-watercolor-result.png`、`sanju-watercolor-library.png`、`sanju-watercolor-favorite.png`。
-
 | 文件 | 修改内容 |
 | --- | --- |
-| `Sanju/Theme.swift` 和 `Assets.xcassets/AccentColor.colorset` | 全局颜色、卡片、圆角、主按钮 |
-| `Sanju/CreationVisuals.swift`、`Sanju/PoetryVisuals.swift` | 海色与纸色、文风色、阅读字体、水彩背景和共享卡片 |
-| `Sanju/CreationView.swift` | 选图、描述、心情标签、键盘与生成入口 |
-| `Sanju/ResultView.swift` | 三张句子卡片、操作排列、旧版本交互 |
-| `Sanju/LibraryView.swift` | 历史、收藏、搜索和删除 |
-| `Sanju/SanjuApp.swift` | 标签导航与结果页路由 |
-| `Sanju/BetaAccessView.swift`、`SessionVault.swift` | 邀请码、反馈表单与安全会话保存 |
-| `Config/LocalOverrides.xcconfig` | 公开 API 地址和 Bundle ID；本机签名覆盖放在忽略的 `Signing.local.xcconfig` |
-| `Sanju/Previews.swift` | 三个页面的 Xcode Canvas 固定预览 |
+| `Sanju/Theme.swift`、`Assets.xcassets/*.colorset` | 动态颜色、卡片、主按钮 |
+| `Sanju/PoetryVisuals.swift` | 宋体阅读、流式布局、收藏按钮、素材摘要及删除说明 |
+| `Sanju/CreationView.swift`、`CustomMoodPrompt.swift` | 创作输入、照片、系统心情弹窗、草稿与额度说明 |
+| `Sanju/ResultView.swift` | 三句卡片、生成与异常状态、换句、旧句弹层 |
+| `Sanju/LibraryView.swift` | 日期分组、收藏、搜索、句子详情与删除 |
+| `Sanju/SanjuApp.swift` | 标签导航、结果路由与网络恢复查询 |
+| `Sanju/SettingsView.swift`、`BetaAccessView.swift`、`SessionVault.swift` | 设置、隐私同意、邀请内测与钥匙串 |
 | `SanjuCore/Sources/SanjuCore` | 模型、生成服务、请求恢复与本机存储 |
+| `Sanju/UITestGenerationService.swift` | 仅 Debug + 独立随机句库可用的固定失败/中断测试场景；Preview 与 Release 不包含 |
 
-普通的颜色、字体、卡片和布局调整集中在界面层，可以继续迭代。更改数据字段时需要同步考虑已经保存的句库格式；单纯改界面无需改变已有记录。
+新增或移除 App 的 Swift 文件后运行 `python3 native/scripts/generate-project.py` 更新工程引用。普通颜色和布局调整无需改变已保存的记录。`Sanju/Previews.swift` 的 Canvas 预览采用内存示例；历史水彩素材与字体来源仍见 [CREATION-ART.md](CREATION-ART.md)。
 
-新增或移除 App 的 Swift 文件后运行 `python3 native/scripts/generate-project.py` 更新工程引用。一般修改现有文件不需要重新生成工程。Xcode 三个 Preview 使用内存示例，不会改动设备上的句库。
+## 原生极简版本次验证
+
+- Node/接口 34 项、Swift 核心 19 项通过；Preview 模拟器构建和未签名 iPhone Release 构建通过。
+- 11 项 UI 用例已通过，覆盖 HTTP 生成、首次同意与撤回本次操作、离线完整隐私说明、复制/换句/收藏/重启、旧句恢复、搜索与详情删除、待确认恢复、邀请及钥匙串、浅深色、相册、最大辅助字号、自定义心情与草稿、200/30 字限制。
+- 主流程报告为 `native/build/NativeMinimalVerified.xcresult`：9 项通过，早期自定义心情的自动确认点击失败；修复与复测见 `NativeMinimalInputDone.xcresult`，自定义心情/草稿及字数限制 2 项通过。`NativeMinimalInputFinal.xcresult` 另验证最大辅助字号通过。
+- 系统弹窗确认按钮已在独立测试句库中手动验证；当前 iOS 27 模拟器的自动化确认点击不稳定，最终自动回归使用系统键盘「完成」提交，并检查弹窗消失、心情被选中和重启恢复。字数限制在实际输入框中验证，未调用模型。
+- 实际截图保存在 `deliverables/sanju-native-minimal-*.png`，包含浅色创作/结果/句库/详情、旧句、同意说明、深色创作/结果与自定义心情。相机、真实 HEIC、弱网、覆盖安装和真机键盘仍需实际 iPhone 验收。
 
 ## 验证命令
 
@@ -141,7 +148,7 @@ xcodebuild -project native/Sanju.xcodeproj -scheme 'Sanju Demo' \
 
 UI 测试使用独立的随机句库目录，不清空正常示例/正式模式的记录。它验证本机 HTTP 生成与换句、收藏旧句、重启恢复，以及邀请码加入后钥匙串会话与收藏都能跨重启保留。单元测试覆盖失败不扣额、结果未知时禁止重复创作、磁盘写入失败、删除不恢复额度和本机文件损坏保护。
 
-本轮验证记录：原生核心单元测试 16 项通过，Node/PostgreSQL 接口及既有回归测试 34 项通过，ESLint 和 TypeScript 检查通过；Debug 模拟器和未签名 iPhone Release 构建通过。三条 UI 测试用例已在 iPhone 18 Pro / iOS 27 模拟器执行通过。真实模型已使用项目自有图标完成三种文风和单句替换的技术验证，输出通过字数与去重校验；照片场景的文案质量仍需人工验收。
+此前水彩版验证记录：原生核心单元测试 16 项通过，Node/PostgreSQL 接口及既有回归测试 34 项通过，ESLint 和 TypeScript 检查通过；Debug 模拟器和未签名 iPhone Release 构建通过。三条 UI 测试用例已在 iPhone 18 Pro / iOS 27 模拟器执行通过。真实模型已使用项目自有图标完成三种文风和单句替换的技术验证，输出通过字数与去重校验；照片场景的文案质量仍需人工验收。
 
 评估交互流畅度时，先确认正在运行原生版本；Xcode Canvas 和未优化的 Debug 构建不作为正式性能结论。生成示例文案时的约 0.65 秒等待用于演示加载状态，它与滚动、输入、切换页面的卡顿需要分别判断。句库读取、JSON 编码和文件写入现由独立存储 actor 执行；修改按顺序保存，成功后才更新收藏、版本和生成结果。输入即时更新内存，350 毫秒合并保存，离开页面和进入后台时补存草稿；草稿保存不会触发句库列表更新。照片在独立 actor 中解码并缓存，列表使用最长边 240 像素的缩略图，详情使用最长边 1280 像素的图，避免在视图 body 中重复解码。这些改动消除了已知的主线程 I/O 和重复图片解码路径，尚未进行真机帧率和长时间使用测量。[Apple 响应速度与主线程工作](https://developer.apple.com/documentation/xcode/improving-app-responsiveness)、[Apple Instruments 性能验证](https://developer.apple.com/tutorials/instruments/executing-work-asynchronously)
 
