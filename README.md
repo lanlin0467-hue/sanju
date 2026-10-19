@@ -8,7 +8,7 @@
 
 先用 **Sanju Preview** 体验固定示例文案。真实 AI 邀请后端已实现，但云数据库开通、生产部署与线上验收仍待完成；2026-10-20 检查现有生产地址时，`/api/v1/health` 和 `/privacy` 均返回 404。本快照尚未上传 App Store Connect 或分发 TestFlight。签名、正式 Bundle ID 和测试审核资料需由发布团队配置。
 
-接收开发者请先阅读 [SwiftUI 开发与部署说明](native/README.md)；`ios/App` 与 `mobile/` 保留的是旧 Capacitor 路线，不是这次主要交接的客户端。
+接手上架请先阅读 [sanju2.0 上架交接说明](deliverables/sanju2.0上架交接说明.md)，其中列明正确工程、当前进度、生产部署、签名、真机验收与提审待办。详细开发命令见 [SwiftUI 开发与部署说明](native/README.md)；`ios/App` 与 `mobile/` 保留的是旧 Capacitor 路线，不是这次主要交接的客户端。
 
 ## SwiftUI 原生版本
 

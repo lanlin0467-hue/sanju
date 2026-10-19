@@ -1,6 +1,6 @@
 # 三句 sanju 开发交接说明
 
-> 历史文档：以下内容描述 sanju1.0 网页快照，不代表 sanju2.0 当前状态。SwiftUI iPhone 工程、句库与收藏、邀请后端及水彩界面已经实现。sanju2.0 的当前入口为 `native/Sanju.xcodeproj`；交接与部署请阅读仓库根目录 `README.md` 和 `native/README.md`。正式云数据库与生产服务尚待开通、部署和验收，尚未分发 TestFlight。
+> 历史文档：以下内容描述 sanju1.0 网页快照，不代表 sanju2.0 当前状态。当前入口为 `native/Sanju.xcodeproj`，界面已更新为原生极简版；接手上架请阅读 [sanju2.0 上架交接说明](sanju2.0上架交接说明.md)。详细命令见仓库根目录 `README.md` 和 `native/README.md`。正式云数据库与生产服务尚待开通、部署和验收，尚未分发 TestFlight。
 
 交接日期：2026-10-19。接收方为负责 iPhone App 开发、后端部署和上架的开发者。本说明对应源码快照 `9837e5a`，聚焦已经实现的网页功能及继续开发所需信息。
 
