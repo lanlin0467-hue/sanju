@@ -3,8 +3,10 @@
 import { useRef, useState } from "react";
 import { compressImage, formatKb } from "@/lib/compressImage";
 import { limits } from "@/lib/config";
+import { requestGeneration } from "@/lib/clientApi";
+import { copyText, isNativeApp, pickNativeImage, shareText } from "@/lib/native";
 
-const PRIVACY_TEXT = "上传图片请注意隐私与备份，本站不留存您的图片";
+const PRIVACY_TEXT = "上传图片请注意隐私与备份。三句服务端不保存您的图片；生成时图片会发送给第三方 AI 服务处理，其保留规则以服务商公示为准。";
 
 type StyleName = "鲁迅" | "莎士比亚" | "江南";
 
@@ -26,6 +28,7 @@ export function HomeForm() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [compressedLabel, setCompressedLabel] = useState("");
   const [imageError, setImageError] = useState("");
+  const [pickingImage, setPickingImage] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
@@ -37,8 +40,21 @@ export function HomeForm() {
   const [copiedStyle, setCopiedStyle] = useState<StyleName | "">("");
   const [swapsLeft, setSwapsLeft] = useState<number>(limits.swaps);
 
-  function openFilePicker() {
-    fileInputRef.current?.click();
+  async function openFilePicker() {
+    if (!isNativeApp()) {
+      fileInputRef.current?.click();
+      return;
+    }
+    setPickingImage(true);
+    setImageError("");
+    try {
+      const file = await pickNativeImage();
+      if (file) await onPickImage(file);
+    } catch {
+      setImageError("无法打开照片，请在系统设置中检查相机或照片权限后重试");
+    } finally {
+      setPickingImage(false);
+    }
   }
 
   function onChooseImageClick() {
@@ -46,17 +62,16 @@ export function HomeForm() {
       setShowPrivacy(true);
       return;
     }
-    openFilePicker();
+    void openFilePicker();
   }
 
   function onPrivacyAccept() {
     setShowPrivacy(false);
     setPrivacyAccepted(true);
-    window.setTimeout(() => openFilePicker(), 0);
+    void openFilePicker();
   }
 
-  async function onPickImage(fileList: FileList | null) {
-    const file = fileList?.[0];
+  async function onPickImage(file: File | undefined) {
     if (!file) return;
 
     setImageError("");
@@ -78,22 +93,27 @@ export function HomeForm() {
 
   async function onCopy(style: StyleName, line: string) {
     try {
-      await navigator.clipboard.writeText(line);
+      await copyText(line);
     } catch {
-      const area = document.createElement("textarea");
-      area.value = line;
-      area.setAttribute("readonly", "");
-      area.style.position = "fixed";
-      area.style.left = "-9999px";
-      document.body.appendChild(area);
-      area.select();
-      document.execCommand("copy");
-      document.body.removeChild(area);
+      setFailMessage("复制失败，请长按句子复制");
+      return;
     }
     setCopiedStyle(style);
     window.setTimeout(() => {
       setCopiedStyle((current) => (current === style ? "" : current));
     }, 1500);
+  }
+
+  async function onShare(style: StyleName, line: string) {
+    try {
+      if ((await shareText(line)) === "copied") {
+        setCopiedStyle(style);
+        window.setTimeout(() => setCopiedStyle(""), 1500);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      setFailMessage("分享失败，请稍后再试，也可以复制句子");
+    }
   }
 
   async function onGenerate() {
@@ -110,27 +130,11 @@ export function HomeForm() {
     setResult(null);
     setHistory(EMPTY_HISTORY);
     try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mood: mood.trim(),
-          ...(scene.trim() ? { scene: scene.trim() } : {}),
-          ...(imageDataUrl ? { image: imageDataUrl } : {}),
-        }),
+      const data = await requestGeneration<Styles>({
+        mood: mood.trim(),
+        ...(scene.trim() ? { scene: scene.trim() } : {}),
+        ...(imageDataUrl ? { image: imageDataUrl } : {}),
       });
-      const raw = await response.text();
-      let data: Styles & { error?: string };
-      try {
-        data = JSON.parse(raw) as Styles & { error?: string };
-      } catch {
-        setFailMessage("后厨超时或返回异常,请稍后再试");
-        return;
-      }
-      if (!response.ok || data.error) {
-        setFailMessage(data.error || "生成失败,请稍后再试");
-        return;
-      }
       if (!data.鲁迅 || !data.莎士比亚 || !data.江南) {
         setFailMessage("生成失败,请稍后再试");
         return;
@@ -147,8 +151,8 @@ export function HomeForm() {
         江南: [nextResult.江南],
       });
       setSwapsLeft(limits.swaps);
-    } catch {
-      setFailMessage("没连上后厨,请稍后再试");
+    } catch (error) {
+      setFailMessage(error instanceof Error ? error.message : "生成失败，请稍后再试");
     } finally {
       setLoading(false);
     }
@@ -161,26 +165,14 @@ export function HomeForm() {
     setReplacingStyle(style);
     const previous = history[style];
     try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mood: mood.trim(),
-          scene: scene.trim() || "（见上传图片）",
-          replaceStyle: style,
-          previous,
-        }),
+      const data = await requestGeneration<Partial<Styles>>({
+        mood: mood.trim(),
+        scene: scene.trim() || "（见上传图片）",
+        replaceStyle: style,
+        previous,
       });
-      const raw = await response.text();
-      let data: Partial<Styles> & { error?: string };
-      try {
-        data = JSON.parse(raw) as Partial<Styles> & { error?: string };
-      } catch {
-        setFailMessage("后厨超时或返回异常,请稍后再试");
-        return;
-      }
-      if (!response.ok || data.error || !data[style]) {
-        setFailMessage(data.error || "换句失败,请稍后再试");
+      if (!data[style]) {
+        setFailMessage("换句失败,请稍后再试");
         return;
       }
       const line = data[style] as string;
@@ -190,8 +182,8 @@ export function HomeForm() {
         [style]: [...previous, line],
       });
       setSwapsLeft((n) => Math.max(0, n - 1));
-    } catch {
-      setFailMessage("没连上后厨,请稍后再试");
+    } catch (error) {
+      setFailMessage(error instanceof Error ? error.message : "换句失败，请稍后再试");
     } finally {
       setReplacingStyle("");
     }
@@ -206,7 +198,7 @@ export function HomeForm() {
   ).filter((item): item is [StyleName, string] => Boolean(item[1]));
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-md px-4 py-8 pb-28 pt-[max(2rem,env(safe-area-inset-top))]">
+    <main className="mx-auto min-h-dvh w-full max-w-md px-4 pb-[max(7rem,calc(env(safe-area-inset-bottom)+2rem))] pt-[max(2rem,calc(env(safe-area-inset-top)+1rem))]">
       <h1 className="text-3xl font-semibold tracking-tight">三句</h1>
       <p className="mt-2 text-sm leading-6 text-neutral-600">
         把画面和心情写成三种味道，挑一句就用。
@@ -225,16 +217,16 @@ export function HomeForm() {
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             className="hidden"
-            onChange={(event) => void onPickImage(event.target.files)}
+            onChange={(event) => void onPickImage(event.target.files?.[0])}
           />
           <button
             type="button"
             onClick={onChooseImageClick}
+            disabled={pickingImage}
             className="min-h-12 w-full rounded-md border border-neutral-300 px-4 py-3 text-left text-base"
           >
-            选择图片
+            {pickingImage ? "正在读取照片…" : "选择图片"}
           </button>
           {compressedLabel ? (
             <p className="text-xs text-neutral-500">{compressedLabel}</p>
@@ -293,6 +285,9 @@ export function HomeForm() {
         >
           {loading ? "正在写…" : "生成"}
         </button>
+        <p className="text-xs leading-5 text-neutral-500">
+          生成时，画面、心情及所选图片将发送至第三方 AI 服务处理。请勿提交敏感个人信息。
+        </p>
       </form>
 
       {loading ? (
@@ -324,6 +319,13 @@ export function HomeForm() {
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
+                      onClick={() => void onShare(name, line)}
+                      className="min-h-11 px-1 text-sm text-neutral-800"
+                    >
+                      分享
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => void onCopy(name, line)}
                       className="min-h-11 px-1 text-sm text-neutral-800 underline-offset-2 hover:underline"
                     >
@@ -349,7 +351,7 @@ export function HomeForm() {
       ) : null}
 
       {showPrivacy ? (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-4 sm:items-center sm:justify-center">
+        <div role="dialog" aria-modal="true" aria-label="图片隐私说明" className="fixed inset-0 z-50 flex items-end bg-black/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:items-center sm:justify-center">
           <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-lg">
             <p className="text-base leading-7 text-neutral-900">{PRIVACY_TEXT}</p>
             <button
@@ -358,6 +360,9 @@ export function HomeForm() {
               className="mt-5 min-h-12 w-full rounded-md bg-neutral-900 px-4 py-3 text-base font-medium text-white"
             >
               知道了
+            </button>
+            <button type="button" onClick={() => setShowPrivacy(false)} className="mt-2 min-h-11 w-full text-sm text-neutral-600">
+              暂不上传
             </button>
           </div>
         </div>

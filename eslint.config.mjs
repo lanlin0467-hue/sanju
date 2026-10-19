@@ -12,6 +12,14 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "mobile/.next/**",
+    "mobile/out/**",
+    "mobile/public/**",
+    "mobile/next-env.d.ts",
+    "ios/**",
+    "native/build/**",
+    "native/SanjuCore/.build/**",
+    ".vercel/**",
   ]),
 ]);
 

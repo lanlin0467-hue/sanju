@@ -1,0 +1,498 @@
+// !$*UTF8*$!
+{
+	archiveVersion = "1";
+	classes = {
+
+	};
+	objectVersion = "56";
+	objects = {
+		FF4BCDE5DE1F579878BA4073 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "BetaAccessView.swift";
+			sourceTree = "<group>";
+		};
+		1046AD5D3C57E622F3C9EFFD = {
+			isa = "PBXBuildFile";
+			fileRef = FF4BCDE5DE1F579878BA4073;
+		};
+		8250A136D82EBA007FB4DFA6 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "CreationView.swift";
+			sourceTree = "<group>";
+		};
+		3113BF3A17CB7345902609DA = {
+			isa = "PBXBuildFile";
+			fileRef = 8250A136D82EBA007FB4DFA6;
+		};
+		43EBA631C383A39D92B7FF95 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "CreationVisuals.swift";
+			sourceTree = "<group>";
+		};
+		7A24DBB347E45B19BE6F9E8E = {
+			isa = "PBXBuildFile";
+			fileRef = 43EBA631C383A39D92B7FF95;
+		};
+		BD70A310F2F30DD5291DD366 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "LibraryView.swift";
+			sourceTree = "<group>";
+		};
+		EC62B0E60C086CA3FF56F909 = {
+			isa = "PBXBuildFile";
+			fileRef = BD70A310F2F30DD5291DD366;
+		};
+		0956364068FA6BFDA405C47C = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "PhotoSupport.swift";
+			sourceTree = "<group>";
+		};
+		F33D442430A0B07047718EAD = {
+			isa = "PBXBuildFile";
+			fileRef = 0956364068FA6BFDA405C47C;
+		};
+		840B31C4645AD531162E7C23 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "PoetryVisuals.swift";
+			sourceTree = "<group>";
+		};
+		CA94CF313963D56504488B5D = {
+			isa = "PBXBuildFile";
+			fileRef = 840B31C4645AD531162E7C23;
+		};
+		AB37FEB20FBFA1258CC56766 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "Previews.swift";
+			sourceTree = "<group>";
+		};
+		5845333B6E434ED15CE9AE37 = {
+			isa = "PBXBuildFile";
+			fileRef = AB37FEB20FBFA1258CC56766;
+		};
+		44D93956AD45BFC1035A7E73 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "ResultView.swift";
+			sourceTree = "<group>";
+		};
+		9933876EB526E8D235D26468 = {
+			isa = "PBXBuildFile";
+			fileRef = 44D93956AD45BFC1035A7E73;
+		};
+		62FC8AEFEE4FB07B5045DAEA = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "SanjuApp.swift";
+			sourceTree = "<group>";
+		};
+		B6AE3888CBBF60604E65BDE4 = {
+			isa = "PBXBuildFile";
+			fileRef = 62FC8AEFEE4FB07B5045DAEA;
+		};
+		593640CFC73CF15752585114 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "SessionVault.swift";
+			sourceTree = "<group>";
+		};
+		0DDEDD9F3022536788070CB8 = {
+			isa = "PBXBuildFile";
+			fileRef = 593640CFC73CF15752585114;
+		};
+		EEDE96C56CBAC202420A47BC = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "SettingsView.swift";
+			sourceTree = "<group>";
+		};
+		CF24D1628BAE3F3AFC8F0C87 = {
+			isa = "PBXBuildFile";
+			fileRef = EEDE96C56CBAC202420A47BC;
+		};
+		09F61F0FC73D14B7A5181A70 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "Theme.swift";
+			sourceTree = "<group>";
+		};
+		049CF0099F06CEABFD4DD625 = {
+			isa = "PBXBuildFile";
+			fileRef = 09F61F0FC73D14B7A5181A70;
+		};
+		3685E330EC5277A9DD5661C6 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "folder.assetcatalog";
+			path = "Assets.xcassets";
+			sourceTree = "<group>";
+		};
+		59BD0A3FF43B32849B319E64 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.plist.xml";
+			path = "Info.plist";
+			sourceTree = "<group>";
+		};
+		66F17FD47768D90D75A0AC8F = {
+			isa = "PBXBuildFile";
+			fileRef = 3685E330EC5277A9DD5661C6;
+		};
+		96ED5C5789B174A01557791C = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.xml";
+			path = "PrivacyInfo.xcprivacy";
+			sourceTree = "<group>";
+		};
+		F85CC3700C4469A5828A6C8A = {
+			isa = "PBXBuildFile";
+			fileRef = 96ED5C5789B174A01557791C;
+		};
+		4379DE9BB515F88906F99A14 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "file";
+			path = "Fonts/NotoSerifSC-OFL.txt";
+			sourceTree = "<group>";
+		};
+		DB1C8A6193214637E999ACFC = {
+			isa = "PBXBuildFile";
+			fileRef = 4379DE9BB515F88906F99A14;
+		};
+		204AA3B47E446CA17C48CF90 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "file";
+			path = "Fonts/SanjuPoetry-Regular.ttf";
+			sourceTree = "<group>";
+		};
+		01694A8F80C8764F88A5AE8F = {
+			isa = "PBXBuildFile";
+			fileRef = 204AA3B47E446CA17C48CF90;
+		};
+		38A007151ABE87CC01A5B6E9 = {
+			isa = "PBXFileReference";
+			explicitFileType = "wrapper.application";
+			path = "Sanju.app";
+			includeInIndex = "0";
+			sourceTree = "BUILT_PRODUCTS_DIR";
+		};
+		482182478A3ECD4745BEA917 = {
+			isa = "PBXGroup";
+			path = "Sanju";
+			children = (FF4BCDE5DE1F579878BA4073, 8250A136D82EBA007FB4DFA6, 43EBA631C383A39D92B7FF95, BD70A310F2F30DD5291DD366, 0956364068FA6BFDA405C47C, 840B31C4645AD531162E7C23, AB37FEB20FBFA1258CC56766, 44D93956AD45BFC1035A7E73, 62FC8AEFEE4FB07B5045DAEA, 593640CFC73CF15752585114, EEDE96C56CBAC202420A47BC, 09F61F0FC73D14B7A5181A70, 3685E330EC5277A9DD5661C6, 59BD0A3FF43B32849B319E64, 96ED5C5789B174A01557791C, 4379DE9BB515F88906F99A14, 204AA3B47E446CA17C48CF90);
+			sourceTree = "<group>";
+		};
+		1EE63A94BAD0DF0FCB0E7B8C = {
+			isa = "PBXGroup";
+			name = "Products";
+			children = (38A007151ABE87CC01A5B6E9, 9D3AD977850B7EAC0E4F6585);
+			sourceTree = "<group>";
+		};
+		5EC5C7020CABC4A99E04D1AB = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "text.xcconfig";
+			path = "Config/LocalOverrides.xcconfig";
+			sourceTree = "<group>";
+		};
+		B28B7AF69320201D1CF206EB = {
+			isa = "PBXGroup";
+			children = (482182478A3ECD4745BEA917, C6BE165566F099AC1055F551, 1EE63A94BAD0DF0FCB0E7B8C, 5EC5C7020CABC4A99E04D1AB);
+			sourceTree = "<group>";
+		};
+		582681C2EAE02B3F3D399C0C = {
+			isa = "XCLocalSwiftPackageReference";
+			relativePath = "SanjuCore";
+		};
+		DE58E2B17C19600779694943 = {
+			isa = "XCSwiftPackageProductDependency";
+			package = 582681C2EAE02B3F3D399C0C;
+			productName = "SanjuCore";
+		};
+		4F0AA52D656A3D75867F784B = {
+			isa = "PBXBuildFile";
+			productRef = DE58E2B17C19600779694943;
+		};
+		BCE16DD0260827ECF338C787 = {
+			isa = "PBXSourcesBuildPhase";
+			buildActionMask = "2147483647";
+			files = (1046AD5D3C57E622F3C9EFFD, 3113BF3A17CB7345902609DA, 7A24DBB347E45B19BE6F9E8E, EC62B0E60C086CA3FF56F909, F33D442430A0B07047718EAD, CA94CF313963D56504488B5D, 5845333B6E434ED15CE9AE37, 9933876EB526E8D235D26468, B6AE3888CBBF60604E65BDE4, 0DDEDD9F3022536788070CB8, CF24D1628BAE3F3AFC8F0C87, 049CF0099F06CEABFD4DD625);
+			runOnlyForDeploymentPostprocessing = "0";
+		};
+		7561BFB015D8F536760CB671 = {
+			isa = "PBXFrameworksBuildPhase";
+			buildActionMask = "2147483647";
+			files = (4F0AA52D656A3D75867F784B);
+			runOnlyForDeploymentPostprocessing = "0";
+		};
+		0189424A5A60FED329FA868E = {
+			isa = "PBXResourcesBuildPhase";
+			buildActionMask = "2147483647";
+			files = (66F17FD47768D90D75A0AC8F, F85CC3700C4469A5828A6C8A, DB1C8A6193214637E999ACFC, 01694A8F80C8764F88A5AE8F);
+			runOnlyForDeploymentPostprocessing = "0";
+		};
+		AB52CB08E0FDF02BF6C67C33 = {
+			isa = "XCBuildConfiguration";
+			buildSettings = {
+				SDKROOT = "iphoneos";
+				IPHONEOS_DEPLOYMENT_TARGET = "17.0";
+				CLANG_ENABLE_MODULES = "YES";
+				CLANG_ENABLE_OBJC_ARC = "YES";
+				SWIFT_VERSION = "5.0";
+				ONLY_ACTIVE_ARCH = "YES";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				DEBUG_INFORMATION_FORMAT = "dwarf";
+				ENABLE_TESTABILITY = "YES";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG";
+			};
+			baseConfigurationReference = 5EC5C7020CABC4A99E04D1AB;
+			name = "Debug";
+		};
+		59E1BEE911F66DA37FEBACDC = {
+			isa = "XCBuildConfiguration";
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "AccentColor";
+				CODE_SIGN_STYLE = "Automatic";
+				CURRENT_PROJECT_VERSION = "1";
+				GENERATE_INFOPLIST_FILE = "NO";
+				INFOPLIST_FILE = "Sanju/Info.plist";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(SANJU_BUNDLE_ID)";
+				PRODUCT_NAME = "Sanju";
+				TARGETED_DEVICE_FAMILY = "1";
+				MARKETING_VERSION = "0.1.0";
+				SWIFT_EMIT_LOC_STRINGS = "YES";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				ENABLE_PREVIEWS = "YES";
+				ENABLE_DEBUG_DYLIB = "NO";
+				SANJU_DISPLAY_NAME = "三句·原生开发";
+			};
+			name = "Debug";
+		};
+		D57A7E14077A02D033CEC4BE = {
+			isa = "XCBuildConfiguration";
+			buildSettings = {
+				SDKROOT = "iphoneos";
+				IPHONEOS_DEPLOYMENT_TARGET = "17.0";
+				CLANG_ENABLE_MODULES = "YES";
+				CLANG_ENABLE_OBJC_ARC = "YES";
+				SWIFT_VERSION = "5.0";
+				ONLY_ACTIVE_ARCH = "YES";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_TESTABILITY = "NO";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "SANJU_PREVIEW";
+			};
+			baseConfigurationReference = 5EC5C7020CABC4A99E04D1AB;
+			name = "Preview";
+		};
+		460F3CA3D9F3D56E6830BA63 = {
+			isa = "XCBuildConfiguration";
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "AccentColor";
+				CODE_SIGN_STYLE = "Automatic";
+				CURRENT_PROJECT_VERSION = "1";
+				GENERATE_INFOPLIST_FILE = "NO";
+				INFOPLIST_FILE = "Sanju/Info.plist";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(SANJU_BUNDLE_ID)";
+				PRODUCT_NAME = "Sanju";
+				TARGETED_DEVICE_FAMILY = "1";
+				MARKETING_VERSION = "0.1.0";
+				SWIFT_EMIT_LOC_STRINGS = "YES";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				ENABLE_PREVIEWS = "YES";
+				ENABLE_DEBUG_DYLIB = "NO";
+				SANJU_DISPLAY_NAME = "三句·原生预览";
+			};
+			name = "Preview";
+		};
+		5283471FF90C511CFE244FFF = {
+			isa = "XCBuildConfiguration";
+			buildSettings = {
+				SDKROOT = "iphoneos";
+				IPHONEOS_DEPLOYMENT_TARGET = "17.0";
+				CLANG_ENABLE_MODULES = "YES";
+				CLANG_ENABLE_OBJC_ARC = "YES";
+				SWIFT_VERSION = "5.0";
+				ONLY_ACTIVE_ARCH = "NO";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_TESTABILITY = "NO";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+			};
+			baseConfigurationReference = 5EC5C7020CABC4A99E04D1AB;
+			name = "Release";
+		};
+		F4C425279CD5DDD18FD6DC6D = {
+			isa = "XCBuildConfiguration";
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "AccentColor";
+				CODE_SIGN_STYLE = "Automatic";
+				CURRENT_PROJECT_VERSION = "1";
+				GENERATE_INFOPLIST_FILE = "NO";
+				INFOPLIST_FILE = "Sanju/Info.plist";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(SANJU_BUNDLE_ID)";
+				PRODUCT_NAME = "Sanju";
+				TARGETED_DEVICE_FAMILY = "1";
+				MARKETING_VERSION = "0.1.0";
+				SWIFT_EMIT_LOC_STRINGS = "YES";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				ENABLE_PREVIEWS = "YES";
+				ENABLE_DEBUG_DYLIB = "NO";
+				SANJU_DISPLAY_NAME = "三句";
+			};
+			name = "Release";
+		};
+		862894B703A6DEDF96A9DD6C = {
+			isa = "XCConfigurationList";
+			buildConfigurations = (AB52CB08E0FDF02BF6C67C33, D57A7E14077A02D033CEC4BE, 5283471FF90C511CFE244FFF);
+			defaultConfigurationIsVisible = "0";
+			defaultConfigurationName = "Release";
+		};
+		C57128001CE614BF8549D6BB = {
+			isa = "XCConfigurationList";
+			buildConfigurations = (59E1BEE911F66DA37FEBACDC, 460F3CA3D9F3D56E6830BA63, F4C425279CD5DDD18FD6DC6D);
+			defaultConfigurationIsVisible = "0";
+			defaultConfigurationName = "Release";
+		};
+		0E8A3AD980EC179856012B7E = {
+			isa = "PBXNativeTarget";
+			buildConfigurationList = C57128001CE614BF8549D6BB;
+			buildPhases = (BCE16DD0260827ECF338C787, 7561BFB015D8F536760CB671, 0189424A5A60FED329FA868E);
+			buildRules = ();
+			dependencies = ();
+			name = "Sanju";
+			productName = "Sanju";
+			productReference = 38A007151ABE87CC01A5B6E9;
+			productType = "com.apple.product-type.application";
+			packageProductDependencies = (DE58E2B17C19600779694943);
+		};
+		4DDE1B02B46FB05CF1955EC0 = {
+			isa = "PBXFileReference";
+			lastKnownFileType = "sourcecode.swift";
+			path = "CoreFlowTests.swift";
+			sourceTree = "<group>";
+		};
+		C6BE165566F099AC1055F551 = {
+			isa = "PBXGroup";
+			path = "SanjuUITests";
+			children = (4DDE1B02B46FB05CF1955EC0);
+			sourceTree = "<group>";
+		};
+		9D3AD977850B7EAC0E4F6585 = {
+			isa = "PBXFileReference";
+			explicitFileType = "wrapper.cfbundle";
+			path = "SanjuUITests.xctest";
+			sourceTree = "BUILT_PRODUCTS_DIR";
+		};
+		8F69D2603037B23E80BB9FA3 = {
+			isa = "PBXBuildFile";
+			fileRef = 4DDE1B02B46FB05CF1955EC0;
+		};
+		95FC400A54C228DD62344224 = {
+			isa = "PBXSourcesBuildPhase";
+			buildActionMask = "2147483647";
+			files = (8F69D2603037B23E80BB9FA3);
+			runOnlyForDeploymentPostprocessing = "0";
+		};
+		D9FB501DA3968CBEF9599EF1 = {
+			isa = "XCBuildConfiguration";
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = "YES";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(SANJU_BUNDLE_ID).uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = "Sanju";
+				TARGETED_DEVICE_FAMILY = "1";
+				CODE_SIGN_STYLE = "Automatic";
+			};
+			name = "Debug";
+		};
+		78CA76B903B2E9F2CA9BD184 = {
+			isa = "XCBuildConfiguration";
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = "YES";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(SANJU_BUNDLE_ID).uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = "Sanju";
+				TARGETED_DEVICE_FAMILY = "1";
+				CODE_SIGN_STYLE = "Automatic";
+			};
+			name = "Preview";
+		};
+		B8599B8020883BB052A8556D = {
+			isa = "XCBuildConfiguration";
+			buildSettings = {
+				GENERATE_INFOPLIST_FILE = "YES";
+				PRODUCT_BUNDLE_IDENTIFIER = "$(SANJU_BUNDLE_ID).uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_TARGET_NAME = "Sanju";
+				TARGETED_DEVICE_FAMILY = "1";
+				CODE_SIGN_STYLE = "Automatic";
+			};
+			name = "Release";
+		};
+		3646145E0A90C6FF41610EFE = {
+			isa = "XCConfigurationList";
+			buildConfigurations = (D9FB501DA3968CBEF9599EF1, 78CA76B903B2E9F2CA9BD184, B8599B8020883BB052A8556D);
+			defaultConfigurationIsVisible = "0";
+			defaultConfigurationName = "Release";
+		};
+		5538D6C94541880BC3B9A168 = {
+			isa = "PBXContainerItemProxy";
+			containerPortal = 98F54143AB4E86B28C3AFEE0;
+			proxyType = "1";
+			remoteGlobalIDString = 0E8A3AD980EC179856012B7E;
+			remoteInfo = "Sanju";
+		};
+		B1FB45770585B0E6C098AB54 = {
+			isa = "PBXTargetDependency";
+			target = 0E8A3AD980EC179856012B7E;
+			targetProxy = 5538D6C94541880BC3B9A168;
+		};
+		D24B997AF00C71C20D86BE4D = {
+			isa = "PBXNativeTarget";
+			buildConfigurationList = 3646145E0A90C6FF41610EFE;
+			buildPhases = (95FC400A54C228DD62344224);
+			buildRules = ();
+			dependencies = (B1FB45770585B0E6C098AB54);
+			name = "SanjuUITests";
+			productName = "SanjuUITests";
+			productReference = 9D3AD977850B7EAC0E4F6585;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		98F54143AB4E86B28C3AFEE0 = {
+			isa = "PBXProject";
+			attributes = {
+				LastUpgradeCheck = "2700";
+				TargetAttributes = {
+					0E8A3AD980EC179856012B7E = {
+						CreatedOnToolsVersion = "27.0";
+						ProvisioningStyle = "Automatic";
+					};
+					D24B997AF00C71C20D86BE4D = {
+						CreatedOnToolsVersion = "27.0";
+						TestTargetID = 0E8A3AD980EC179856012B7E;
+					};
+				};
+			};
+			buildConfigurationList = 862894B703A6DEDF96A9DD6C;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = "zh-Hans";
+			knownRegions = ("zh-Hans", "en", "Base");
+			mainGroup = B28B7AF69320201D1CF206EB;
+			productRefGroup = 1EE63A94BAD0DF0FCB0E7B8C;
+			projectDirPath = "";
+			projectRoot = "";
+			packageReferences = (582681C2EAE02B3F3D399C0C);
+			targets = (0E8A3AD980EC179856012B7E, D24B997AF00C71C20D86BE4D);
+		};
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0;
+}

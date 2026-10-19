@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -24,25 +24,21 @@ function isIosSafari() {
 }
 
 /** 引导把网页装到主屏幕；已是独立窗口时不显示。 */
+const subscribeToEnvironment = () => () => {};
+const getServerEnvironment = () => "hidden";
+const getEnvironment = () => {
+  if (isStandalone() || sessionStorage.getItem("sanju_install_dismissed") === "1") return "hidden";
+  return isIosSafari() ? "ios" : "browser";
+};
+
 export function InstallHint() {
-  const [hidden, setHidden] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [ios, setIos] = useState(false);
+  const environment = useSyncExternalStore(subscribeToEnvironment, getEnvironment, getServerEnvironment);
+  const hidden = dismissed || environment === "hidden";
+  const ios = environment === "ios";
 
   useEffect(() => {
-    if (isStandalone()) {
-      setHidden(true);
-      return;
-    }
-    const dismissed = sessionStorage.getItem("sanju_install_dismissed") === "1";
-    if (dismissed) {
-      setHidden(true);
-      return;
-    }
-
-    setIos(isIosSafari());
-    setHidden(false);
-
     function onBeforeInstall(event: Event) {
       event.preventDefault();
       setDeferred(event as BeforeInstallPromptEvent);
@@ -58,12 +54,12 @@ export function InstallHint() {
     await deferred.prompt();
     await deferred.userChoice;
     setDeferred(null);
-    setHidden(true);
+    setDismissed(true);
   }
 
   function onDismiss() {
     sessionStorage.setItem("sanju_install_dismissed", "1");
-    setHidden(true);
+    setDismissed(true);
   }
 
   return (

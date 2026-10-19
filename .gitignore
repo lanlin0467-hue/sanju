@@ -40,3 +40,42 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# iOS / mobile build artifacts
+/mobile/.next/
+/mobile/out/
+/mobile/public/
+/mobile/next-env.d.ts
+/mobile/AGENTS.md
+/mobile/CLAUDE.md
+/ios/build/
+/ios/build-device/
+/ios/DerivedData/
+/ios/App/App/public/
+/ios/App/App/capacitor.config.json
+/ios/App/App/config.xml
+**/xcuserdata/
+*.xcuserstate
+
+# Native SwiftUI build products
+/native/build/
+/native/SanjuCore/.build/
+/native/SanjuCore/.swiftpm/
+
+# Local beta invitations and release credentials
+/.local/
+
+/native/Config/Signing.local.xcconfig
+
+# Local signing material and generated handoff bundles
+*.p8
+*.p12
+*.pfx
+*.mobileprovision
+*.key
+/deliverables/*.zip
+/deliverables/*.zip.sha256
+
+# Python tool caches
+__pycache__/
+*.py[cod]

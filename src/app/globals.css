@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* mobile 构建入口在子目录，显式扫描共享界面的工具类。 */
+@source "../";
 
 body {
   margin: 0;

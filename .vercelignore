@@ -6,3 +6,10 @@ node_modules
 docs
 scripts
 AGENTS.md
+ios
+mobile
+native
+deliverables
+capacitor.config.ts
+
+.local

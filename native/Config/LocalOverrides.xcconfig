@@ -1,0 +1,4 @@
+// Public build settings. Put local Team / Bundle ID overrides in Signing.local.xcconfig.
+SANJU_BUNDLE_ID = com.sanju.native
+SANJU_API_BASE_URL = https:/$()/sanju-two.vercel.app
+#include? "Signing.local.xcconfig"
