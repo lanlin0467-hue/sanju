@@ -1,14 +1,16 @@
 # 三句 sanju2.0 上架交接说明
 
-交接日期：2026-10-20。接收方：负责 SwiftUI 客户端、后端部署、签名及 App Store 提审的开发者。
+交接日期：2026-10-20；设计补充：2026-10-22。接收方：负责 SwiftUI 客户端、后端部署、签名及 App Store 提审的开发者。
 
 「三句」让用户提供照片或画面描述、选择心情，生成冷峻、浪漫、青春三种文风的短句。当前原生客户端和邀请内测后端代码已经实现，原生极简界面已推送；**生产后端尚未接通，尚未上传 App Store Connect 或分发 TestFlight。** 接手范围包括部署、真机验收及审核准备，不能只做打包上传。
+
+2026-10-22 产品所有者已确认 [紫藤纸景系列](../native/Design/Wisteria/README.md)为最新视觉方向，三页设计稿覆盖创作、结果和句库。当前可运行客户端仍是原生极简版；接手开发需按新稿完成 SwiftUI 接入和适配，再进行发布验收。
 
 ## 接手入口与版本
 
 | 项目 | 交接信息 |
 | --- | --- |
-| GitHub 私有仓库 | [lanlin0467-hue/sanju](https://github.com/lanlin0467-hue/sanju)；由所有者邀请协作者，无需公开仓库 |
+| GitHub 仓库 | [lanlin0467-hue/sanju](https://github.com/lanlin0467-hue/sanju)，已由所有者授权公开；查看代码和文档无需邀请，直接推送代码仍需协作者权限 |
 | 当前开发分支 | [`sanju2.0`](https://github.com/lanlin0467-hue/sanju/tree/sanju2.0) |
 | 界面改版基线 | [`26a99d040e58a0f0a9a71d7d359d630fb1855290`](https://github.com/lanlin0467-hue/sanju/commit/26a99d040e58a0f0a9a71d7d359d630fb1855290)，提交说明为「sanju2.0: 接入原生极简界面与状态交互」；后续文档提交在此之后 |
 | 原开发机目录 | `/Users/zero/Desktop/sanju`；接收方可 clone 到自己的目录 |
@@ -39,6 +41,7 @@ Release 不接受 `--demo`、`--api-base-url` 或测试场景参数。Preview �
 | `native/SanjuUITests/` | 独立随机句库的模拟器 UI 回归 |
 | `native/Config/LocalOverrides.xcconfig` | 公开 API 地址与 Bundle ID 配置 |
 | `native/scripts/generate-project.py` | 工程生成脚本；新增或移除 App Swift 文件后运行 |
+| `native/Design/Wisteria/README.md` | 最新确认的紫藤纸景视觉、三页设计稿、提示词及接入要点 |
 | `native/Design/NativeMinimal/design-tokens.json` | 本轮原生极简设计 Token；动态颜色在 App 的 Asset Catalog 中 |
 | `src/app/api/v1/`、`src/lib/beta/` | 新版邀请内测 API、数据库、额度和模型调用 |
 | `db/migrations/001_beta.sql`、`scripts/beta-admin.mjs` | PostgreSQL 迁移及内测管理工具 |
@@ -99,6 +102,7 @@ SANJU_BUNDLE_ID = com.yourcompany.sanju
 | --- | --- | --- |
 | 开发者会员与账号归属 | 账号主体、Team 待确认 | 所有者确认个人或组织账号并完成会员及协议；接手人用受邀账号协作 |
 | 正式应用身份与签名 | 正式 Bundle ID 未定，未验证分发签名 | 所有者确认标识；接手人完成 App Store Connect 记录、签名、Archive 和 Validate |
+| 紫藤纸景界面接入 | 三页设计稿已确认，SwiftUI 尚未接入 | 按设计说明完成三页原生布局、相关状态与辅助页面的视觉统一，并复核深色、大字号、键盘和真机表现 |
 | 生产服务 | 数据库开通、迁移、部署和线上联调未完成 | 授权后部署；真实客户端完成有图生成、换句、恢复、额度和反馈验收 |
 | 隐私与支持 | App 内说明可离线阅读，生产网页返回 404；支持邮箱未定 | 所有者确认运营主体和联系方式；接手人上线可公开访问的隐私与支持页面，统一 App 和商店披露 |
 | 内容安全 | 提示词含安全约束，已有反馈和资格撤销；完整治理未验收 | 接手人补齐服务端输入/输出过滤、拒绝与举报处理流程，测试风险样本，明确人工处理责任 |
